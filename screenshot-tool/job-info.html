@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Job Information</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f5f5f5;
+      color: #333;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+    }
+    
+    h1 {
+      margin-top: 0;
+      margin-bottom: 5px;
+      color: #333;
+    }
+    
+    .company {
+      color: #666;
+      margin-bottom: 20px;
+      font-size: 18px;
+    }
+    
+    .info-section {
+      margin-bottom: 20px;
+    }
+    
+    .info-section h2 {
+      border-bottom: 1px solid #eee;
+      padding-bottom: 8px;
+      margin-bottom: 15px;
+      color: #2196F3;
+    }
+    
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 15px;
+    }
+    
+    .info-item {
+      margin-bottom: 10px;
+    }
+    
+    .info-item .label {
+      font-weight: 500;
+      margin-bottom: 5px;
+      color: #555;
+    }
+    
+    .info-item .value {
+      background-color: #f9f9f9;
+      padding: 8px 12px;
+      border-radius: 4px;
+      border-left: 3px solid #2196F3;
+    }
+    
+    .list-item {
+      margin-bottom: 8px;
+      padding-left: 20px;
+      position: relative;
+    }
+    
+    .list-item:before {
+      content: "•";
+      position: absolute;
+      left: 0;
+      color: #2196F3;
+    }
+    
+    .description {
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+    
+    .actions {
+      margin-top: 30px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+    
+    button {
+      background-color: #2196F3;
+      border: none;
+      color: white;
+      padding: 8px 16px;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 14px;
+      margin: 0;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: background-color 0.2s;
+    }
+    
+    button:hover {
+      background-color: #0b7dda;
+    }
+    
+    button.secondary {
+      background-color: #757575;
+    }
+    
+    button.secondary:hover {
+      background-color: #616161;
+    }
+    
+    .loading {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 300px;
+      flex-direction: column;
+    }
+    
+    .loading-spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #2196F3;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin-bottom: 20px;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="loading" class="loading">
+      <div class="loading-spinner"></div>
+      <p>Loading job information...</p>
+    </div>
+    
+    <div id="job-info" style="display: none;">
+      <h1 id="job-title">Job Title</h1>
+      <div class="company" id="company-name">Company Name</div>
+      
+      <div class="info-section">
+        <h2>Overview</h2>
+        <div class="info-grid">
+          <div class="info-item">
+            <div class="label">Location</div>
+            <div class="value" id="location">Location</div>
+          </div>
+          <div class="info-item">
+            <div class="label">Job Type</div>
+            <div class="value" id="job-type">Job Type</div>
+          </div>
+          <div class="info-item">
+            <div class="label">Salary</div>
+            <div class="value" id="salary">Salary</div>
+          </div>
+          <div class="info-item">
+            <div class="label">Application Deadline</div>
+            <div class="value" id="deadline">Deadline</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="info-section">
+        <h2>Description</h2>
+        <div class="description" id="description">Job description will appear here.</div>
+      </div>
+      
+      <div class="info-section">
+        <h2>Requirements</h2>
+        <div id="requirements-list">
+          <!-- Requirements will be inserted here -->
+        </div>
+      </div>
+      
+      <div class="info-section">
+        <h2>Skills</h2>
+        <div id="skills-list">
+          <!-- Skills will be inserted here -->
+        </div>
+      </div>
+      
+      <div class="info-section">
+        <h2>Benefits</h2>
+        <div id="benefits-list">
+          <!-- Benefits will be inserted here -->
+        </div>
+      </div>
+      
+      <div class="info-section">
+        <h2>Contact Information</h2>
+        <div class="info-item">
+          <div class="value" id="contact-info">Contact information will appear here.</div>
+        </div>
+      </div>
+      
+      <div class="actions">
+        <button id="close-btn" class="secondary">Close</button>
+        <button id="save-btn">Save as JSON</button>
+        <button id="add-to-tracker-btn" class="primary">Add to Tracker</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // DOM Elements
+    const loadingElement = document.getElementById('loading');
+    const jobInfoElement = document.getElementById('job-info');
+    const jobTitleElement = document.getElementById('job-title');
+    const companyNameElement = document.getElementById('company-name');
+    const locationElement = document.getElementById('location');
+    const jobTypeElement = document.getElementById('job-type');
+    const salaryElement = document.getElementById('salary');
+    const deadlineElement = document.getElementById('deadline');
+    const descriptionElement = document.getElementById('description');
+    const requirementsListElement = document.getElementById('requirements-list');
+    const skillsListElement = document.getElementById('skills-list');
+    const benefitsListElement = document.getElementById('benefits-list');
+    const contactInfoElement = document.getElementById('contact-info');
+    const closeBtn = document.getElementById('close-btn');
+    const saveBtn = document.getElementById('save-btn');
+    
+    // Listen for job data from main process
+    window.electron.onJobData((jobData) => {
+      console.log('Received job data:', jobData);
+      displayJobData(jobData);
+    });
+    
+    // Handle close button click
+    closeBtn.addEventListener('click', () => {
+      window.close();
+    });
+    
+    // Handle save button click
+    saveBtn.addEventListener('click', () => {
+      // For now, just save as JSON file
+      const jobData = window.currentJobData;
+      if (jobData) {
+        const jsonString = JSON.stringify(jobData, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `job-${jobData.companyName}-${jobData.jobTitle}.json`.replace(/\s+/g, '-');
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+    });
+
+    // Handle add to tracker button click
+    document.getElementById('add-to-tracker-btn').addEventListener('click', async () => {
+      const jobData = window.currentJobData;
+      if (jobData) {
+        try {
+          await window.electron.addInternship(jobData);
+          window.electron.showTracker();
+          window.close();
+        } catch (error) {
+          console.error('Error adding to tracker:', error);
+          alert('Failed to add job to tracker');
+        }
+      }
+    });
+    
+    // Display job data in the UI
+    function displayJobData(jobData) {
+      // Save job data for later use
+      window.currentJobData = jobData;
+      
+      // Set job title and company name
+      jobTitleElement.textContent = jobData.jobTitle || 'Unknown Job Title';
+      companyNameElement.textContent = jobData.companyName || 'Unknown Company';
+      
+      // Set other job details
+      locationElement.textContent = jobData.location || 'Not specified';
+      jobTypeElement.textContent = jobData.jobType || 'Not specified';
+      salaryElement.textContent = jobData.salary || 'Not specified';
+      deadlineElement.textContent = jobData.applicationDeadline || 'Not specified';
+      descriptionElement.textContent = jobData.description || 'No description available.';
+      contactInfoElement.textContent = jobData.contactInfo || 'Not provided';
+      
+      // Create requirements list
+      requirementsListElement.innerHTML = '';
+      if (jobData.requirements && jobData.requirements.length > 0) {
+        jobData.requirements.forEach(requirement => {
+          const listItem = document.createElement('div');
+          listItem.className = 'list-item';
+          listItem.textContent = requirement;
+          requirementsListElement.appendChild(listItem);
+        });
+      } else {
+        requirementsListElement.textContent = 'No specific requirements listed.';
+      }
+      
+      // Create skills list
+      skillsListElement.innerHTML = '';
+      if (jobData.skills && jobData.skills.length > 0) {
+        jobData.skills.forEach(skill => {
+          const listItem = document.createElement('div');
+          listItem.className = 'list-item';
+          listItem.textContent = skill;
+          skillsListElement.appendChild(listItem);
+        });
+      } else {
+        skillsListElement.textContent = 'No specific skills listed.';
+      }
+      
+      // Create benefits list
+      benefitsListElement.innerHTML = '';
+      if (jobData.benefits && jobData.benefits.length > 0) {
+        jobData.benefits.forEach(benefit => {
+          const listItem = document.createElement('div');
+          listItem.className = 'list-item';
+          listItem.textContent = benefit;
+          benefitsListElement.appendChild(listItem);
+        });
+      } else {
+        benefitsListElement.textContent = 'No benefits listed.';
+      }
+      
+      // Hide loading, show job info
+      loadingElement.style.display = 'none';
+      jobInfoElement.style.display = 'block';
+    }
+  </script>
+</body>
+</html> 

@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Internship Tracker</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f5f5f5;
+      color: #333;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    
+    h1 {
+      margin: 0;
+      color: #333;
+    }
+    
+    .filters {
+      background-color: #fff;
+      border-radius: 8px;
+      padding: 15px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      margin-bottom: 20px;
+      display: flex;
+      gap: 15px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    
+    .filter-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .filter-label {
+      font-weight: 500;
+      color: #555;
+      white-space: nowrap;
+    }
+    
+    select, input {
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    
+    button {
+      background-color: #2196F3;
+      border: none;
+      color: white;
+      padding: 8px 16px;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 14px;
+      margin: 0;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: background-color 0.2s;
+    }
+    
+    button:hover {
+      background-color: #0b7dda;
+    }
+    
+    button.primary {
+      background-color: #4CAF50;
+    }
+    
+    button.primary:hover {
+      background-color: #45a049;
+    }
+    
+    button.danger {
+      background-color: #f44336;
+    }
+    
+    button.danger:hover {
+      background-color: #d32f2f;
+    }
+    
+    .internship-table {
+      width: 100%;
+      border-collapse: collapse;
+      background-color: #fff;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    .internship-table th,
+    .internship-table td {
+      padding: 12px 15px;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+    }
+    
+    .internship-table th {
+      background-color: #f9f9f9;
+      font-weight: 600;
+      color: #333;
+    }
+    
+    .internship-table tr:last-child td {
+      border-bottom: none;
+    }
+    
+    .internship-table tr:hover {
+      background-color: #f5f5f5;
+    }
+    
+    .status-badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+      text-transform: uppercase;
+      color: white;
+    }
+    
+    .status-interested {
+      background-color: #4a86e8;
+    }
+    
+    .status-applied {
+      background-color: #ffc107;
+      color: #333;
+    }
+    
+    .status-interviewing {
+      background-color: #17a2b8;
+    }
+    
+    .status-rejected {
+      background-color: #dc3545;
+    }
+    
+    .status-accepted {
+      background-color: #28a745;
+    }
+    
+    .actions {
+      display: flex;
+      gap: 5px;
+    }
+    
+    .action-btn {
+      padding: 4px 8px;
+      font-size: 12px;
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 40px 0;
+      color: #666;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: #666;
+    }
+    
+    /* Modal styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      display: none;
+    }
+    
+    .modal {
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+      width: 500px;
+      max-width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    
+    .modal-header {
+      padding: 15px 20px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .modal-title {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      color: #666;
+    }
+    
+    .modal-body {
+      padding: 20px;
+    }
+    
+    .modal-footer {
+      padding: 15px 20px;
+      border-top: 1px solid #eee;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+    
+    .form-group {
+      margin-bottom: 15px;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+      color: #555;
+    }
+    
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+    
+    .form-group textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Internship Tracker</h1>
+      <button id="addInternshipBtn" class="primary">Add Internship</button>
+    </header>
+    
+    <div class="filters">
+      <div class="filter-group">
+        <span class="filter-label">Status:</span>
+        <select id="statusFilter">
+          <option value="all">All Statuses</option>
+          <option value="interested">Interested</option>
+          <option value="applied">Applied</option>
+          <option value="interviewing">Interviewing</option>
+          <option value="rejected">Rejected</option>
+          <option value="accepted">Accepted</option>
+        </select>
+      </div>
+      
+      <div class="filter-group">
+        <span class="filter-label">Search:</span>
+        <input type="text" id="searchFilter" placeholder="Company or position...">
+      </div>
+      
+      <button id="clearFiltersBtn">Clear Filters</button>
+    </div>
+    
+    <div id="internshipTableContainer">
+      <div class="loading">Loading internships...</div>
+    </div>
+  </div>
+  
+  <!-- Edit Internship Modal -->
+  <div id="editModal" class="modal-overlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">Edit Internship</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="editForm">
+          <input type="hidden" id="editId">
+          
+          <div class="form-group">
+            <label for="editCompany">Company</label>
+            <input type="text" id="editCompany" required>
+          </div>
+          
+          <div class="form-group">
+            <label for="editTitle">Position</label>
+            <input type="text" id="editTitle" required>
+          </div>
+          
+          <div class="form-group">
+            <label for="editLocation">Location</label>
+            <input type="text" id="editLocation">
+          </div>
+          
+          <div class="form-group">
+            <label for="editStatus">Status</label>
+            <select id="editStatus">
+              <option value="interested">Interested</option>
+              <option value="applied">Applied</option>
+              <option value="interviewing">Interviewing</option>
+              <option value="rejected">Rejected</option>
+              <option value="accepted">Accepted</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label for="editNotes">Notes</label>
+            <textarea id="editNotes"></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-close secondary">Cancel</button>
+        <button id="saveInternshipBtn" class="primary">Save</button>
+      </div>
+    </div>
+  </div>
+  
+  <script src="tracker.js"></script>
+</body>
+</html> 

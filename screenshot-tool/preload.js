@@ -19,6 +19,8 @@ contextBridge.exposeInMainWorld('electron', {
   getScreenshots: () => ipcRenderer.invoke('get-screenshots'),
   deleteScreenshot: (id) => ipcRenderer.invoke('delete-screenshot', id),
   openScreenshot: (id) => ipcRenderer.invoke('open-screenshot', id),
+  clearScreenshots: () => ipcRenderer.invoke('clear-screenshots'),
+  openFile: (filePath) => ipcRenderer.invoke('open-file', filePath),
   
   // Internship tracker
   getInternships: () => ipcRenderer.invoke('get-internships'),
@@ -36,6 +38,11 @@ contextBridge.exposeInMainWorld('electron', {
   showContextMenu: (x, y) => ipcRenderer.invoke('show-context-menu', x, y),
   hideToolbar: () => ipcRenderer.invoke('hide-toolbar'),
   saveToolbarPosition: (x, y) => ipcRenderer.invoke('save-toolbar-position', x, y),
+  
+  // Window positioning and resizing methods
+  moveWindow: (x, y) => ipcRenderer.invoke('move-window', x, y),
+  getWindowPosition: () => ipcRenderer.invoke('get-window-position'),
+  resizeWindow: (width, height) => ipcRenderer.invoke('resize-window', width, height),
   
   // Context awareness
   detectJobSite: () => ipcRenderer.invoke('detect-job-site'),
@@ -98,4 +105,4 @@ contextBridge.exposeInMainWorld('electron', {
     ipcRenderer.on('trigger-analyze', () => callback());
     return unsubscribe;
   }
-}); 
+});

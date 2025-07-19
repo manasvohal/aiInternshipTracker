@@ -44,8 +44,8 @@ A powerful Electron desktop application that helps you capture screenshots of jo
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/ai-internship-tracker.git
-   cd ai-internship-tracker/screenshot-tool
+   git clone https://github.com/manasvohal/aiInternshipTracker.git
+   cd aiInternshipTracker/screenshot-tool
    ```
 
 2. **Install dependencies**
@@ -171,9 +171,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/ai-internship-tracker/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/ai-internship-tracker/discussions)
-- **Email**: your.email@example.com
+- **Issues**: [GitHub Issues](https://github.com/manasvohal/aiInternshipTracker/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/manasvohal/aiInternshipTracker/discussions)
+- **Email**: manas.vohal@example.com
 
 ## 🔮 Roadmap
 

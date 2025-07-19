@@ -133,29 +133,32 @@ function createTrackerWindow() {
   });
 }
 
-// Enhanced toolbar window with Cluely-inspired features
+// Enhanced toolbar window with dashboard integration
 function createToolbarWindow() {
-  const savedPosition = store.get('toolbarPosition');
+  const savedPosition = store.get('toolbarPosition', { x: 100, y: 100 });
   const primaryDisplay = screen.getPrimaryDisplay();
   const { width, height } = primaryDisplay.workAreaSize;
   
-  // Smart positioning - keep within screen bounds
-  const x = Math.max(0, Math.min(savedPosition.x, width - 400));
-  const y = Math.max(0, Math.min(savedPosition.y, height - 80));
+  const toolbarWidth = 400;
+  const toolbarHeight = 65;
+  const padding = 10;
+  
+  const x = Math.max(padding, Math.min(savedPosition.x, width - toolbarWidth - padding));
+  const y = Math.max(padding, Math.min(savedPosition.y, height - toolbarHeight - padding));
 
   toolbarWindow = new BrowserWindow({
-    width: 400,
-    height: 65,
+    width: toolbarWidth,
+    height: toolbarHeight,
     x: x,
     y: y,
     frame: false,
     transparent: true,
-    resizable: false,
+    resizable: true, // Allow programmatic resizing for dashboard
     alwaysOnTop: true,
     skipTaskbar: true,
     opacity: 0.85,
-    vibrancy: 'ultra-dark', // macOS
-    backgroundMaterial: 'acrylic', // Windows 11
+    vibrancy: 'ultra-dark',
+    backgroundMaterial: 'acrylic',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -166,73 +169,9 @@ function createToolbarWindow() {
 
   toolbarWindow.loadFile('toolbar.html');
   
-  // Enhanced auto-fade behavior
-  setupToolbarAutoFade();
-  
-  // Smart edge snapping
-  setupEdgeSnapping();
-  
   toolbarWindow.on('closed', () => {
     toolbarWindow = null;
     isToolbarVisible = false;
-  });
-
-  toolbarWindow.on('moved', () => {
-    const [x, y] = toolbarWindow.getPosition();
-    store.set('toolbarPosition', { x, y });
-  });
-}
-
-// Setup auto-fade behavior for toolbar
-function setupToolbarAutoFade() {
-  if (!toolbarWindow) return;
-  
-  let fadeTimeout;
-  
-  const startFadeTimer = () => {
-    clearTimeout(fadeTimeout);
-    fadeTimeout = setTimeout(() => {
-      if (toolbarWindow && !toolbarWindow.isDestroyed()) {
-        toolbarWindow.setOpacity(0.6);
-      }
-    }, 3000);
-  };
-  
-  const cancelFadeTimer = () => {
-    clearTimeout(fadeTimeout);
-    if (toolbarWindow && !toolbarWindow.isDestroyed()) {
-      toolbarWindow.setOpacity(0.95);
-    }
-  };
-  
-  toolbarWindow.on('blur', startFadeTimer);
-  toolbarWindow.on('focus', cancelFadeTimer);
-  
-  // Start initial timer
-  startFadeTimer();
-}
-
-// Setup edge snapping for toolbar
-function setupEdgeSnapping() {
-  if (!toolbarWindow) return;
-  
-  let snapThreshold = 20;
-  
-  toolbarWindow.on('moved', () => {
-    const [x, y] = toolbarWindow.getPosition();
-    const bounds = screen.getPrimaryDisplay().workAreaSize;
-    let newX = x;
-    let newY = y;
-    
-    // Snap to edges
-    if (x < snapThreshold) newX = 0;
-    if (y < snapThreshold) newY = 0;
-    if (x > bounds.width - 400 - snapThreshold) newX = bounds.width - 400;
-    if (y > bounds.height - 65 - snapThreshold) newY = bounds.height - 65;
-    
-    if (newX !== x || newY !== y) {
-      toolbarWindow.setPosition(newX, newY);
-    }
   });
 }
 
@@ -294,7 +233,6 @@ function createTray() {
       { 
         label: 'Settings',
         click: () => {
-          // TODO: Implement settings window
           dialog.showMessageBox({
             type: 'info',
             title: 'Settings',
@@ -337,7 +275,6 @@ function createTray() {
 function startContextDetection() {
   contextDetectionInterval = setInterval(async () => {
     try {
-      // Get all open windows and detect job sites
       const windows = BrowserWindow.getAllWindows();
       for (const window of windows) {
         if (window.webContents) {
@@ -404,7 +341,6 @@ function triggerAnalyze() {
 // Show a notification
 function showNotification(title, body) {
   try {
-    // Show dialog instead of notification for simplicity
     dialog.showMessageBox({
       type: 'info',
       title: title,
@@ -447,7 +383,6 @@ async function saveScreenshot(dataURL) {
     fs.writeFileSync(filePath, buffer);
     
     // Create thumbnail for database
-    const thumbnailSize = 200;
     const thumbnailPath = path.join(saveDir, `screenshot-${timestamp}-thumb.png`);
     
     // Save the screenshot to database
@@ -464,7 +399,7 @@ async function saveScreenshot(dataURL) {
     
     // Add to database
     const screenshots = screenshotStore.get('screenshots') || [];
-    screenshots.unshift(screenshot); // Add to beginning of array
+    screenshots.unshift(screenshot);
     
     // Keep only the latest 100 screenshots
     if (screenshots.length > 100) {
@@ -473,15 +408,15 @@ async function saveScreenshot(dataURL) {
     
     screenshotStore.set('screenshots', screenshots);
     
-    // Notify the main window if it exists
+    // Notify the main window and toolbar if they exist
     if (mainWindow) {
       mainWindow.webContents.send('screenshot-added', screenshot);
     }
+    if (toolbarWindow) {
+      toolbarWindow.webContents.send('screenshot-added', screenshot);
+    }
     
     showNotification('Success', `Screenshot saved to ${filePath}`);
-    
-    // Open the file
-    shell.openPath(filePath);
     
     return filePath;
   } catch (error) {
@@ -494,7 +429,6 @@ async function saveScreenshot(dataURL) {
 // Process job information from screenshot
 async function processJobInfo(screenshotPath) {
   try {
-    // Show loading dialog
     dialog.showMessageBox({
       type: 'info',
       title: 'Processing',
@@ -502,7 +436,6 @@ async function processJobInfo(screenshotPath) {
       buttons: []
     });
     
-    // Extract text from image
     const extractedText = await extractTextFromImage(screenshotPath);
     
     if (!extractedText || extractedText.trim() === '') {
@@ -510,13 +443,9 @@ async function processJobInfo(screenshotPath) {
       return null;
     }
     
-    // Extract job information from text
     const jobData = await extractJobInformation(extractedText);
-    
-    // Add screenshot path to job data
     jobData.screenshotPath = screenshotPath;
     
-    // Show job information window
     createJobInfoWindow(jobData);
     
     return jobData;
@@ -530,30 +459,24 @@ async function processJobInfo(screenshotPath) {
 // Add internship to tracker
 function addInternshipToTracker(internshipData) {
   try {
-    // Generate unique ID if not exists
     if (!internshipData.id) {
       internshipData.id = Date.now().toString();
     }
     
-    // Set default status if not provided
     if (!internshipData.status) {
       internshipData.status = 'interested';
     }
     
-    // Add timestamp
     internshipData.addedAt = new Date().toISOString();
     
-    // Get existing internships
     const internships = internshipStore.get('internships') || [];
     
-    // Check if internship already exists (based on company and title)
     const existingIndex = internships.findIndex(
       i => i.companyName === internshipData.companyName && 
            i.jobTitle === internshipData.jobTitle
     );
     
     if (existingIndex >= 0) {
-      // Update existing internship
       internships[existingIndex] = {
         ...internships[existingIndex],
         ...internshipData,
@@ -562,15 +485,12 @@ function addInternshipToTracker(internshipData) {
       
       showNotification('Updated', `Updated internship at ${internshipData.companyName}`);
     } else {
-      // Add new internship
       internships.unshift(internshipData);
       showNotification('Added', `Added new internship at ${internshipData.companyName}`);
     }
     
-    // Save to store
     internshipStore.set('internships', internships);
     
-    // Notify tracker window if open
     if (trackerWindow) {
       trackerWindow.webContents.send('internships-updated');
     }
@@ -587,7 +507,7 @@ function addInternshipToTracker(internshipData) {
 app.whenReady().then(() => {
   createToolbarWindow();
   createTray();
-  startContextDetection(); // Start context detection
+  startContextDetection();
   
   // Register global shortcuts
   globalShortcut.register('CmdOrCtrl+Shift+C', () => {
@@ -597,7 +517,6 @@ app.whenReady().then(() => {
     triggerAnalyze();
   });
 
-  // Mac-specific behavior
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createToolbarWindow();
@@ -693,7 +612,6 @@ ipcMain.handle('update-internship', (event, id, updates) => {
     
     internshipStore.set('internships', internships);
     
-    // Notify tracker window if open
     if (trackerWindow) {
       trackerWindow.webContents.send('internships-updated');
     }
@@ -711,7 +629,6 @@ ipcMain.handle('delete-internship', (event, id) => {
   if (newInternships.length !== internships.length) {
     internshipStore.set('internships', newInternships);
     
-    // Notify tracker window if open
     if (trackerWindow) {
       trackerWindow.webContents.send('internships-updated');
     }
@@ -727,7 +644,6 @@ ipcMain.handle('delete-screenshot', (event, id) => {
   const screenshot = screenshots.find(s => s.id === id);
   
   if (screenshot) {
-    // Try to delete the files
     try {
       if (fs.existsSync(screenshot.path)) {
         fs.unlinkSync(screenshot.path);
@@ -739,7 +655,6 @@ ipcMain.handle('delete-screenshot', (event, id) => {
       console.error('Error deleting screenshot files:', err);
     }
     
-    // Remove from database
     const newScreenshots = screenshots.filter(s => s.id !== id);
     screenshotStore.set('screenshots', newScreenshots);
     
@@ -785,7 +700,112 @@ ipcMain.handle('set-save-directory', async () => {
   return store.get('saveDirectory');
 });
 
-// Enhanced Cluely-inspired IPC handlers
+// Add missing IPC handlers for new dashboard functionality
+ipcMain.handle('open-file', async (event, filePath) => {
+  try {
+    if (fs.existsSync(filePath)) {
+      await shell.openPath(filePath);
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error('Error opening file:', error);
+    throw error;
+  }
+});
+
+ipcMain.handle('clear-screenshots', async () => {
+  try {
+    const screenshots = screenshotStore.get('screenshots') || [];
+    
+    // Delete all screenshot files
+    for (const screenshot of screenshots) {
+      try {
+        if (fs.existsSync(screenshot.path)) {
+          fs.unlinkSync(screenshot.path);
+        }
+        if (fs.existsSync(screenshot.thumbnailPath)) {
+          fs.unlinkSync(screenshot.thumbnailPath);
+        }
+      } catch (err) {
+        console.error('Error deleting screenshot file:', err);
+      }
+    }
+    
+    // Clear the database
+    screenshotStore.set('screenshots', []);
+    
+    // Notify main window if it exists
+    if (mainWindow) {
+      mainWindow.webContents.send('screenshots-cleared');
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error clearing screenshots:', error);
+    throw error;
+  }
+});
+
+// Enhanced window management IPC handlers
+ipcMain.handle('move-window', (event, x, y) => {
+  const window = BrowserWindow.fromWebContents(event.sender);
+  if (window && !window.isDestroyed()) {
+    const primaryDisplay = screen.getPrimaryDisplay();
+    const { width, height } = primaryDisplay.workAreaSize;
+    
+    const [currentWidth, currentHeight] = window.getSize();
+    const padding = 10;
+    
+    const validX = Math.max(padding, Math.min(x, width - currentWidth - padding));
+    const validY = Math.max(padding, Math.min(y, height - currentHeight - padding));
+    
+    window.setPosition(validX, validY);
+    return { x: validX, y: validY };
+  }
+  return null;
+});
+
+ipcMain.handle('get-window-position', (event) => {
+  const window = BrowserWindow.fromWebContents(event.sender);
+  if (window && !window.isDestroyed()) {
+    const [x, y] = window.getPosition();
+    return { x, y };
+  }
+  return { x: 0, y: 0 };
+});
+
+ipcMain.handle('resize-window', (event, width, height) => {
+  const window = BrowserWindow.fromWebContents(event.sender);
+  if (window && !window.isDestroyed()) {
+    const [x, y] = window.getPosition();
+    
+    const minWidth = 400;
+    const maxWidth = 800;
+    const minHeight = 65;
+    const maxHeight = 500;
+    
+    const validWidth = Math.max(minWidth, Math.min(width, maxWidth));
+    const validHeight = Math.max(minHeight, Math.min(height, maxHeight));
+    
+    const primaryDisplay = screen.getPrimaryDisplay();
+    const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+    
+    const adjustedX = Math.max(0, Math.min(x, screenWidth - validWidth));
+    const adjustedY = Math.max(0, Math.min(y, screenHeight - validHeight));
+    
+    window.setBounds({
+      x: adjustedX,
+      y: adjustedY,
+      width: validWidth,
+      height: validHeight
+    });
+    
+    return { width: validWidth, height: validHeight };
+  }
+  return null;
+});
+
 ipcMain.handle('set-toolbar-opacity', (event, opacity) => {
   if (toolbarWindow && !toolbarWindow.isDestroyed()) {
     toolbarWindow.setOpacity(opacity);
@@ -815,7 +835,26 @@ ipcMain.handle('hide-toolbar', () => {
 });
 
 ipcMain.handle('save-toolbar-position', (event, x, y) => {
-  store.set('toolbarPosition', { x, y });
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { width, height } = primaryDisplay.workAreaSize;
+  
+  const toolbarWidth = 400;
+  const toolbarHeight = 65;
+  const padding = 10;
+  
+  const validX = Math.max(padding, Math.min(x, width - toolbarWidth - padding));
+  const validY = Math.max(padding, Math.min(y, height - toolbarHeight - padding));
+  
+  store.set('toolbarPosition', { x: validX, y: validY });
+  
+  const window = BrowserWindow.fromWebContents(event.sender);
+  if (window && !window.isDestroyed()) {
+    const [currentX, currentY] = window.getPosition();
+    if (Math.abs(currentX - validX) > 5 || Math.abs(currentY - validY) > 5) {
+      window.setPosition(validX, validY);
+    }
+  }
+  
   return true;
 });
 
@@ -843,10 +882,8 @@ ipcMain.handle('detect-job-site', () => {
 
 // Cleanup on app quit
 app.on('before-quit', () => {
-  // Unregister global shortcuts
   globalShortcut.unregisterAll();
   
-  // Clear intervals
   if (contextDetectionInterval) {
     clearInterval(contextDetectionInterval);
   }
@@ -854,4 +891,4 @@ app.on('before-quit', () => {
   if (toolbarFadeTimeout) {
     clearTimeout(toolbarFadeTimeout);
   }
-}); 
+});

@@ -2,10 +2,17 @@
 const toolbar = document.getElementById('toolbar');
 const captureBtn = document.getElementById('captureBtn');
 const analyzeBtn = document.getElementById('analyzeBtn');
+const dashboardToggle = document.getElementById('dashboardToggle');
 const statusIndicator = document.getElementById('statusIndicator');
 const statusText = document.getElementById('statusText');
 const contextMenu = document.getElementById('contextMenu');
 const hintBubble = document.getElementById('hintBubble');
+
+// Dashboard elements
+const dashboardDropdown = document.getElementById('dashboardDropdown');
+const screenshotGrid = document.getElementById('screenshotGrid');
+const refreshDashboard = document.getElementById('refreshDashboard');
+const clearAll = document.getElementById('clearAll');
 
 // State management
 let currentStatus = 'ready';
@@ -13,12 +20,21 @@ let isProcessing = false;
 let fadeTimeout = null;
 let hintTimeout = null;
 let contextDetection = null;
+let isDashboardOpen = false;
 
 // Initialize toolbar
 document.addEventListener('DOMContentLoaded', () => {
   initializeToolbar();
   setupEventListeners();
   startContextDetection();
+  loadDashboardScreenshots();
+  
+  // Test dashboard functionality on load
+  console.log('Dashboard elements found:', {
+    dropdown: !!dashboardDropdown,
+    toggle: !!dashboardToggle,
+    grid: !!screenshotGrid
+  });
 });
 
 function initializeToolbar() {
@@ -30,108 +46,236 @@ function initializeToolbar() {
 
 function setupEventListeners() {
   // Button clicks
-  captureBtn.addEventListener('click', () => handleCapture(false));
-  analyzeBtn.addEventListener('click', () => handleCapture(true));
+  captureBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    handleCapture(false);
+  });
+  
+  analyzeBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    handleCapture(true);
+  });
+  
+  // Dashboard toggle - FIXED event listener
+  dashboardToggle.addEventListener('click', (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    console.log('Dashboard toggle clicked, current state:', isDashboardOpen);
+    toggleDashboard();
+  });
+  
+  // Dashboard actions
+  if (refreshDashboard) {
+    refreshDashboard.addEventListener('click', (e) => {
+      e.stopPropagation();
+      loadDashboardScreenshots();
+      showHint('Dashboard refreshed');
+    });
+  }
+  
+  if (clearAll) {
+    clearAll.addEventListener('click', (e) => {
+      e.stopPropagation();
+      clearAllScreenshots();
+    });
+  }
   
   // Context menu
   toolbar.addEventListener('contextmenu', handleContextMenu);
-  document.addEventListener('click', hideContextMenu);
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.context-menu') && !e.target.closest('.floating-toolbar')) {
+      hideContextMenu();
+    }
+    // Only close dashboard if clicking completely outside
+    if (!e.target.closest('.dashboard-dropdown') && 
+        !e.target.closest('.dashboard-toggle') && 
+        !e.target.closest('.floating-toolbar')) {
+      closeDashboard();
+    }
+  });
   
   // Context menu items
   contextMenu.addEventListener('click', handleContextMenuClick);
   
   // Hover effects for hints
-  captureBtn.addEventListener('mouseenter', () => showHint('Capture screenshot and open dashboard'));
+  captureBtn.addEventListener('mouseenter', () => showHint('Capture screenshot'));
   analyzeBtn.addEventListener('mouseenter', () => showHint('Capture and analyze job posting'));
+  dashboardToggle.addEventListener('mouseenter', () => showHint('Toggle screenshot dashboard'));
   captureBtn.addEventListener('mouseleave', hideHint);
   analyzeBtn.addEventListener('mouseleave', hideHint);
+  dashboardToggle.addEventListener('mouseleave', hideHint);
   
   // Keyboard navigation
   document.addEventListener('keydown', handleKeyboardShortcuts);
+  
+  // Listen for new screenshots
+  if (window.electron && window.electron.onScreenshotAdded) {
+    window.electron.onScreenshotAdded((screenshot) => {
+      console.log('New screenshot added:', screenshot);
+      loadDashboardScreenshots();
+      if (!isDashboardOpen) {
+        openDashboard();
+        showHint('New screenshot added!');
+      }
+    });
+  }
 }
 
 function setupDragBehavior() {
   let isDragging = false;
-  let startX, startY, initialX, initialY;
-  
+  let dragStartX = 0;
+  let dragStartY = 0;
+  let windowStartX = 0;
+  let windowStartY = 0;
+
   toolbar.addEventListener('mousedown', (e) => {
-    if (e.target.closest('.action-btn') || e.target.closest('.context-menu')) return;
-    
+    // Don't drag if clicking on buttons or dashboard
+    if (e.target.closest('.action-btn') || 
+        e.target.closest('.context-menu') || 
+        e.target.closest('.hint-bubble') ||
+        e.target.closest('.dashboard-dropdown')) {
+      return;
+    }
+
     isDragging = true;
-    startX = e.clientX;
-    startY = e.clientY;
+    dragStartX = e.screenX;
+    dragStartY = e.screenY;
     
-    const rect = toolbar.getBoundingClientRect();
-    initialX = rect.left;
-    initialY = rect.top;
-    
+    getCurrentWindowPosition().then(pos => {
+      windowStartX = pos.x;
+      windowStartY = pos.y;
+    });
+
     toolbar.style.cursor = 'grabbing';
     e.preventDefault();
+    e.stopPropagation();
+
+    document.addEventListener('mousemove', handleDragMove);
+    document.addEventListener('mouseup', handleDragEnd);
   });
-  
-  document.addEventListener('mousemove', (e) => {
+
+  function handleDragMove(e) {
     if (!isDragging) return;
-    
-    const deltaX = e.clientX - startX;
-    const deltaY = e.clientY - startY;
-    
-    toolbar.style.left = `${initialX + deltaX}px`;
-    toolbar.style.top = `${initialY + deltaY}px`;
-    toolbar.style.position = 'fixed';
-  });
-  
-  document.addEventListener('mouseup', () => {
-    if (isDragging) {
-      isDragging = false;
-      toolbar.style.cursor = 'move';
-      
-      // Save position
-      const rect = toolbar.getBoundingClientRect();
-      if (window.electron && window.electron.saveToolbarPosition) {
-        window.electron.saveToolbarPosition(rect.left, rect.top);
-      }
+    e.preventDefault();
+    e.stopPropagation();
+
+    const deltaX = e.screenX - dragStartX;
+    const deltaY = e.screenY - dragStartY;
+    const newX = windowStartX + deltaX;
+    const newY = windowStartY + deltaY;
+
+    if (window.electron && window.electron.moveWindow) {
+      window.electron.moveWindow(newX, newY);
     }
-  });
+  }
+
+  function handleDragEnd(e) {
+    if (!isDragging) return;
+    isDragging = false;
+    toolbar.style.cursor = 'move';
+
+    const deltaX = e.screenX - dragStartX;
+    const deltaY = e.screenY - dragStartY;
+    const finalX = windowStartX + deltaX;
+    const finalY = windowStartY + deltaY;
+
+    if (window.electron && window.electron.saveToolbarPosition) {
+      window.electron.saveToolbarPosition(finalX, finalY);
+    }
+
+    document.removeEventListener('mousemove', handleDragMove);
+    document.removeEventListener('mouseup', handleDragEnd);
+    e.preventDefault();
+    e.stopPropagation();
+  }
+}
+
+async function getCurrentWindowPosition() {
+  if (window.electron && window.electron.getWindowPosition) {
+    return await window.electron.getWindowPosition();
+  }
+  return { x: 0, y: 0 };
+}
+
+async function moveWindowWithArrows(direction) {
+  const currentPos = await getCurrentWindowPosition();
+  const step = 10;
+  
+  let newX = currentPos.x;
+  let newY = currentPos.y;
+  
+  switch (direction) {
+    case 'up': newY -= step; break;
+    case 'down': newY += step; break;
+    case 'left': newX -= step; break;
+    case 'right': newX += step; break;
+  }
+  
+  if (window.electron && window.electron.moveWindow) {
+    window.electron.moveWindow(newX, newY);
+    window.electron.saveToolbarPosition(newX, newY);
+  }
 }
 
 function setupAutoFade() {
-  // Auto-fade when inactive
   function startFadeTimer() {
     clearTimeout(fadeTimeout);
     fadeTimeout = setTimeout(() => {
-      if (!isProcessing && !contextMenu.classList.contains('active')) {
-        toolbar.style.opacity = '0.6';
+      if (!isProcessing && !contextMenu.classList.contains('active') && !isDashboardOpen) {
+        toolbar.style.opacity = '0.8'; // Increased minimum opacity
       }
     }, 3000);
   }
   
   function cancelFadeTimer() {
     clearTimeout(fadeTimeout);
-    toolbar.style.opacity = '0.85';
+    toolbar.style.opacity = '0.98';
   }
   
   toolbar.addEventListener('mouseenter', cancelFadeTimer);
   toolbar.addEventListener('mouseleave', startFadeTimer);
-  toolbar.addEventListener('focus', cancelFadeTimer, true);
-  toolbar.addEventListener('blur', startFadeTimer, true);
   
-  // Start initial timer
   startFadeTimer();
 }
 
 function setupKeyboardShortcuts() {
-  // Listen for global shortcuts from main process
-  if (window.electron && window.electron.onGlobalShortcut) {
-    window.electron.onGlobalShortcut(() => handleCapture(false));
+  if (window.electron && window.electron.onTriggerCapture) {
+    window.electron.onTriggerCapture(() => handleCapture(false));
   }
   
-  if (window.electron && window.electron.onAnalyzeShortcut) {
-    window.electron.onAnalyzeShortcut(() => handleCapture(true));
+  if (window.electron && window.electron.onTriggerAnalyze) {
+    window.electron.onTriggerAnalyze(() => handleCapture(true));
   }
 }
 
 function handleKeyboardShortcuts(e) {
-  // Local keyboard shortcuts
+  // Arrow key movement
+  if (e.ctrlKey || e.metaKey || document.activeElement === document.body) {
+    switch (e.key) {
+      case 'ArrowUp':
+        e.preventDefault();
+        moveWindowWithArrows('up');
+        showHint('↑ Moving up');
+        break;
+      case 'ArrowDown':
+        e.preventDefault();
+        moveWindowWithArrows('down');
+        showHint('↓ Moving down');
+        break;
+      case 'ArrowLeft':
+        e.preventDefault();
+        moveWindowWithArrows('left');
+        showHint('← Moving left');
+        break;
+      case 'ArrowRight':
+        e.preventDefault();
+        moveWindowWithArrows('right');
+        showHint('→ Moving right');
+        break;
+    }
+  }
+  
+  // Function key shortcuts
   if (e.ctrlKey || e.metaKey) {
     switch (e.key) {
       case '1':
@@ -142,6 +286,10 @@ function handleKeyboardShortcuts(e) {
         e.preventDefault();
         handleCapture(true);
         break;
+      case '3':
+        e.preventDefault();
+        toggleDashboard();
+        break;
       case 'h':
         e.preventDefault();
         hideToolbar();
@@ -149,9 +297,27 @@ function handleKeyboardShortcuts(e) {
     }
   }
   
-  // Escape to hide context menu
-  if (e.key === 'Escape') {
-    hideContextMenu();
+  // Other shortcuts
+  switch (e.key) {
+    case 'Escape':
+      hideContextMenu();
+      closeDashboard();
+      break;
+    case 'c':
+      if (!e.ctrlKey && !e.metaKey) {
+        handleCapture(false);
+      }
+      break;
+    case 'a':
+      if (!e.ctrlKey && !e.metaKey) {
+        handleCapture(true);
+      }
+      break;
+    case 'd':
+      if (!e.ctrlKey && !e.metaKey) {
+        toggleDashboard();
+      }
+      break;
   }
 }
 
@@ -162,20 +328,20 @@ async function handleCapture(shouldAnalyze = false) {
     setStatus('processing');
     isProcessing = true;
     
-    // Hide toolbar during capture
-    toolbar.style.opacity = '0';
+    // Close dashboard during capture
+    if (isDashboardOpen) {
+      closeDashboard();
+    }
     
-    // Wait for toolbar to fade
-    await new Promise(resolve => setTimeout(resolve, 300));
+    toolbar.style.opacity = '0.3';
+    await new Promise(resolve => setTimeout(resolve, 200));
     
-    // Get screen sources
     const sources = await window.electron.captureScreenshot();
     
     if (!sources || sources.length === 0) {
       throw new Error('No screen sources available');
     }
     
-    // Process screenshot
     const primarySource = sources[0];
     if (primarySource.thumbnail) {
       const dataURL = primarySource.thumbnail.toDataURL();
@@ -186,9 +352,11 @@ async function handleCapture(shouldAnalyze = false) {
         await window.electron.processJobInfo(filePath);
         showHint('Job analysis complete!');
       } else {
-        // Show dashboard after capture
-        window.electron.showDashboard();
-        showHint('Screenshot saved to dashboard');
+        showHint('Screenshot captured!');
+        // Auto-open dashboard to show new screenshot
+        setTimeout(() => {
+          openDashboard();
+        }, 800);
       }
     }
     
@@ -200,8 +368,202 @@ async function handleCapture(shouldAnalyze = false) {
     setTimeout(() => setStatus('ready'), 3000);
   } finally {
     isProcessing = false;
-    toolbar.style.opacity = '0.85';
+    toolbar.style.opacity = '0.98';
   }
+}
+
+// Dashboard functionality - COMPACT DESIGN
+function toggleDashboard() {
+  console.log('Toggling dashboard, current state:', isDashboardOpen);
+  if (isDashboardOpen) {
+    closeDashboard();
+  } else {
+    openDashboard();
+  }
+}
+
+function openDashboard() {
+  console.log('Opening dashboard...');
+  isDashboardOpen = true;
+  
+  // Add CSS classes for visual feedback
+  dashboardDropdown.classList.add('open');
+  toolbar.classList.add('dashboard-open');
+  dashboardToggle.classList.add('active');
+  
+  // Force the dropdown to be visible
+  dashboardDropdown.style.maxHeight = '300px'; // Compact design height
+  dashboardDropdown.style.opacity = '1';
+  
+  // Resize window to accommodate compact dashboard
+  if (window.electron && window.electron.resizeWindow) {
+    window.electron.resizeWindow(400, 365); // Compact total height
+  }
+  
+  loadDashboardScreenshots();
+  showHint('Dashboard opened');
+  console.log('Dashboard should now be visible');
+}
+
+function closeDashboard() {
+  if (!isDashboardOpen) return;
+  
+  console.log('Closing dashboard...');
+  isDashboardOpen = false;
+  
+  // Remove CSS classes
+  dashboardDropdown.classList.remove('open');
+  toolbar.classList.remove('dashboard-open');
+  dashboardToggle.classList.remove('active');
+  
+  // Force the dropdown to be hidden
+  dashboardDropdown.style.maxHeight = '0';
+  dashboardDropdown.style.opacity = '0';
+  
+  // Resize window back to compact toolbar size
+  if (window.electron && window.electron.resizeWindow) {
+    window.electron.resizeWindow(400, 57); // Compact toolbar height
+  }
+}
+
+async function loadDashboardScreenshots() {
+  try {
+    console.log('Loading dashboard screenshots...');
+    screenshotGrid.innerHTML = '<div class="loading-state">Loading screenshots...</div>';
+    
+    const screenshots = await window.electron.getScreenshots();
+    console.log('Retrieved screenshots:', screenshots?.length || 0);
+    
+    screenshotGrid.innerHTML = '';
+    
+    if (!screenshots || screenshots.length === 0) {
+      screenshotGrid.innerHTML = `
+        <div class="empty-state">
+          <p>No screenshots yet.<br>Capture one to get started!</p>
+        </div>
+      `;
+      return;
+    }
+    
+    // Show only the latest 12 screenshots
+    const recentScreenshots = screenshots.slice(0, 12);
+    
+    recentScreenshots.forEach(screenshot => {
+      const card = createScreenshotCard(screenshot);
+      screenshotGrid.appendChild(card);
+    });
+    
+    console.log('Dashboard loaded with', recentScreenshots.length, 'screenshots');
+    
+  } catch (error) {
+    console.error('Error loading screenshots:', error);
+    screenshotGrid.innerHTML = `
+      <div class="empty-state">
+        <p>Error loading screenshots</p>
+      </div>
+    `;
+  }
+}
+
+function createScreenshotCard(screenshot) {
+  const card = document.createElement('div');
+  card.className = 'screenshot-card';
+  
+  const date = new Date(screenshot.timestamp);
+  const timeAgo = getTimeAgo(date);
+  
+  card.innerHTML = `
+    <div class="screenshot-preview">
+      <img src="file://${screenshot.thumbnailPath}" alt="${screenshot.name}" loading="lazy">
+    </div>
+    <div class="screenshot-info">
+      <p class="screenshot-name">${screenshot.name}</p>
+      <p class="screenshot-date">${timeAgo}</p>
+    </div>
+  `;
+  
+  // Add click handlers
+  card.addEventListener('click', (e) => {
+    e.stopPropagation();
+    openScreenshotActions(screenshot);
+  });
+  
+  return card;
+}
+
+function openScreenshotActions(screenshot) {
+  // Create a simple action menu using confirm dialogs for now
+  const action = prompt(`Choose action for ${screenshot.name}:\n1. View\n2. Analyze\n3. Delete\n\nEnter number (1-3):`);
+  
+  switch (action) {
+    case '1':
+      window.electron.openScreenshot(screenshot.id);
+      break;
+    case '2':
+      analyzeScreenshot(screenshot.id);
+      break;
+    case '3':
+      deleteScreenshot(screenshot.id);
+      break;
+  }
+}
+
+async function analyzeScreenshot(id) {
+  try {
+    setStatus('analyzing');
+    showHint('Analyzing screenshot...');
+    await window.electron.analyzeJobScreenshot(id);
+    setStatus('ready');
+    showHint('Analysis complete!');
+  } catch (error) {
+    console.error('Error analyzing screenshot:', error);
+    setStatus('error');
+    showHint('Analysis failed');
+    setTimeout(() => setStatus('ready'), 2000);
+  }
+}
+
+async function deleteScreenshot(id) {
+  const confirmed = confirm('Delete this screenshot?');
+  if (confirmed) {
+    try {
+      await window.electron.deleteScreenshot(id);
+      loadDashboardScreenshots();
+      showHint('Screenshot deleted');
+    } catch (error) {
+      console.error('Error deleting screenshot:', error);
+      showHint('Delete failed');
+    }
+  }
+}
+
+async function clearAllScreenshots() {
+  const confirmed = confirm('Delete all screenshots? This cannot be undone.');
+  if (confirmed) {
+    try {
+      const screenshots = await window.electron.getScreenshots();
+      for (const screenshot of screenshots) {
+        await window.electron.deleteScreenshot(screenshot.id);
+      }
+      loadDashboardScreenshots();
+      showHint('All screenshots cleared');
+    } catch (error) {
+      console.error('Error clearing screenshots:', error);
+      showHint('Clear failed');
+    }
+  }
+}
+
+function getTimeAgo(date) {
+  const now = new Date();
+  const diffInSeconds = Math.floor((now - date) / 1000);
+  
+  if (diffInSeconds < 60) return 'Just now';
+  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+  if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
+  
+  return date.toLocaleDateString();
 }
 
 function setStatus(status) {
@@ -211,6 +573,7 @@ function setStatus(status) {
   switch (status) {
     case 'ready':
       statusText.textContent = 'Ready';
+      statusIndicator.style.background = '';
       break;
     case 'processing':
       statusText.textContent = 'Capturing...';
@@ -230,6 +593,7 @@ function setStatus(status) {
 
 function handleContextMenu(e) {
   e.preventDefault();
+  e.stopPropagation();
   
   const rect = toolbar.getBoundingClientRect();
   contextMenu.style.left = `${e.clientX - rect.left}px`;
@@ -247,9 +611,6 @@ function handleContextMenuClick(e) {
   hideContextMenu();
   
   switch (action) {
-    case 'dashboard':
-      window.electron.showDashboard();
-      break;
     case 'tracker':
       window.electron.showTracker();
       break;
@@ -291,7 +652,6 @@ function hideToolbar() {
 function startContextDetection() {
   if (!window.electron || !window.electron.detectJobSite) return;
   
-  // Check for job sites every 5 seconds
   contextDetection = setInterval(async () => {
     try {
       const context = await window.electron.detectJobSite();
@@ -314,7 +674,7 @@ function showContextualHints(context) {
   }
 }
 
-// Listen for window focus/blur events
+// Window focus/blur events
 window.addEventListener('focus', () => {
   setStatus(isProcessing ? 'processing' : 'ready');
 });
@@ -325,6 +685,12 @@ window.addEventListener('blur', () => {
   }
 });
 
+// Make window focusable for keyboard shortcuts
+document.addEventListener('DOMContentLoaded', () => {
+  document.body.tabIndex = -1;
+  document.body.focus();
+});
+
 // Cleanup on unload
 window.addEventListener('beforeunload', () => {
   if (contextDetection) {
@@ -332,4 +698,4 @@ window.addEventListener('beforeunload', () => {
   }
   clearTimeout(fadeTimeout);
   clearTimeout(hintTimeout);
-}); 
+});

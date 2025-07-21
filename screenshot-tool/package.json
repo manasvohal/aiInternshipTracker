@@ -16,6 +16,8 @@
     "axios": "^1.10.0",
     "electron-store": "^8.1.0",
     "openai": "^5.10.1",
-    "tesseract.js": "^6.0.1"
+    "tesseract.js": "^6.0.1",
+    "sharp": "^0.33.0"
   }
 }
+ 

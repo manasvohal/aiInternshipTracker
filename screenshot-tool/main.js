@@ -325,7 +325,56 @@ function detectJobSite(url) {
   return 'other';
 }
 
-// Global shortcut handlers
+// Register comprehensive global shortcuts
+function registerGlobalShortcuts() {
+  try {
+    // Core capture shortcuts
+    globalShortcut.register('CmdOrCtrl+Shift+C', () => {
+      triggerCapture();
+    });
+    
+    globalShortcut.register('CmdOrCtrl+Shift+A', () => {
+      triggerAnalyze();
+    });
+    
+    // Dashboard and navigation shortcuts
+    globalShortcut.register('CmdOrCtrl+Shift+D', () => {
+      showDashboard();
+    });
+    
+    globalShortcut.register('CmdOrCtrl+Shift+T', () => {
+      createTrackerWindow();
+    });
+    
+    // Quick actions
+    globalShortcut.register('CmdOrCtrl+Shift+H', () => {
+      toggleToolbarVisibility();
+    });
+    
+    globalShortcut.register('CmdOrCtrl+Shift+R', () => {
+      refreshAllWindows();
+    });
+    
+    // Alternative shortcuts for accessibility
+    globalShortcut.register('F1', () => {
+      triggerCapture();
+    });
+    
+    globalShortcut.register('F2', () => {
+      triggerAnalyze();
+    });
+    
+    globalShortcut.register('F3', () => {
+      showDashboard();
+    });
+    
+    console.log('Global shortcuts registered successfully');
+  } catch (error) {
+    console.error('Error registering global shortcuts:', error);
+  }
+}
+
+// Helper functions for shortcuts
 function triggerCapture() {
   if (toolbarWindow && !toolbarWindow.isDestroyed()) {
     toolbarWindow.webContents.send('trigger-capture');
@@ -336,6 +385,36 @@ function triggerAnalyze() {
   if (toolbarWindow && !toolbarWindow.isDestroyed()) {
     toolbarWindow.webContents.send('trigger-analyze');
   }
+}
+
+function showDashboard() {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.show();
+    mainWindow.focus();
+  } else {
+    createMainWindow();
+  }
+}
+
+function toggleToolbarVisibility() {
+  if (toolbarWindow && !toolbarWindow.isDestroyed()) {
+    if (toolbarWindow.isVisible()) {
+      toolbarWindow.hide();
+    } else {
+      toolbarWindow.show();
+      toolbarWindow.focus();
+    }
+  }
+}
+
+function refreshAllWindows() {
+  // Refresh all open windows
+  const windows = BrowserWindow.getAllWindows();
+  windows.forEach(window => {
+    if (!window.isDestroyed()) {
+      window.webContents.reload();
+    }
+  });
 }
 
 // Show a notification
@@ -509,13 +588,8 @@ app.whenReady().then(() => {
   createTray();
   startContextDetection();
   
-  // Register global shortcuts
-  globalShortcut.register('CmdOrCtrl+Shift+C', () => {
-    triggerCapture();
-  });
-  globalShortcut.register('CmdOrCtrl+Shift+A', () => {
-    triggerAnalyze();
-  });
+  // Register comprehensive global shortcuts
+  registerGlobalShortcuts();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

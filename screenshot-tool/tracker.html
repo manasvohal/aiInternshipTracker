@@ -2,352 +2,825 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Internship Tracker</title>
+  <title>Screenshot Tool</title>
   <style>
-    body {
+    * {
+      box-sizing: border-box;
+    }
+    
+    html, body {
       margin: 0;
-      padding: 20px;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      background-color: #f5f5f5;
-      color: #333;
-    }
-    
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-    
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-    }
-    
-    h1 {
-      margin: 0;
-      color: #333;
-    }
-    
-    .filters {
-      background-color: #fff;
-      border-radius: 8px;
-      padding: 15px;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-      margin-bottom: 20px;
-      display: flex;
-      gap: 15px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-    
-    .filter-group {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    
-    .filter-label {
-      font-weight: 500;
-      color: #555;
-      white-space: nowrap;
-    }
-    
-    select, input {
-      padding: 8px 12px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      font-size: 14px;
-    }
-    
-    button {
-      background-color: #2196F3;
-      border: none;
-      color: white;
-      padding: 8px 16px;
-      text-align: center;
-      text-decoration: none;
-      display: inline-block;
-      font-size: 14px;
-      margin: 0;
-      cursor: pointer;
-      border-radius: 4px;
-      transition: background-color 0.2s;
-    }
-    
-    button:hover {
-      background-color: #0b7dda;
-    }
-    
-    button.primary {
-      background-color: #4CAF50;
-    }
-    
-    button.primary:hover {
-      background-color: #45a049;
-    }
-    
-    button.danger {
-      background-color: #f44336;
-    }
-    
-    button.danger:hover {
-      background-color: #d32f2f;
-    }
-    
-    .internship-table {
+      padding: 0;
       width: 100%;
-      border-collapse: collapse;
-      background-color: #fff;
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      height: 100%;
+      background-color: transparent;
+      overflow: visible;
+      user-select: none;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     }
     
-    .internship-table th,
-    .internship-table td {
-      padding: 12px 15px;
-      text-align: left;
-      border-bottom: 1px solid #eee;
-    }
-    
-    .internship-table th {
-      background-color: #f9f9f9;
-      font-weight: 600;
-      color: #333;
-    }
-    
-    .internship-table tr:last-child td {
-      border-bottom: none;
-    }
-    
-    .internship-table tr:hover {
-      background-color: #f5f5f5;
-    }
-    
-    .status-badge {
-      display: inline-block;
-      padding: 4px 8px;
-      border-radius: 12px;
-      font-size: 12px;
-      font-weight: 500;
-      text-transform: uppercase;
-      color: white;
-    }
-    
-    .status-interested {
-      background-color: #4a86e8;
-    }
-    
-    .status-applied {
-      background-color: #ffc107;
-      color: #333;
-    }
-    
-    .status-interviewing {
-      background-color: #17a2b8;
-    }
-    
-    .status-rejected {
-      background-color: #dc3545;
-    }
-    
-    .status-accepted {
-      background-color: #28a745;
-    }
-    
-    .actions {
-      display: flex;
-      gap: 5px;
-    }
-    
-    .action-btn {
-      padding: 4px 8px;
-      font-size: 12px;
-    }
-    
-    .empty-state {
-      text-align: center;
-      padding: 40px 0;
-      color: #666;
-    }
-    
-    .loading {
-      text-align: center;
-      padding: 20px;
-      color: #666;
-    }
-    
-    /* Modal styles */
-    .modal-overlay {
-      position: fixed;
+    .toolbar-container {
+      position: absolute;
       top: 0;
       left: 0;
       right: 0;
       bottom: 0;
-      background-color: rgba(0, 0, 0, 0.5);
       display: flex;
-      justify-content: center;
+      flex-direction: column;
+      overflow: visible;
+      padding: 8px;
+    }
+    
+    .floating-toolbar {
+      position: relative;
+      display: flex;
       align-items: center;
+      background: linear-gradient(135deg, 
+        rgba(26, 26, 26, 0.95) 0%, 
+        rgba(45, 45, 45, 0.95) 50%, 
+        rgba(35, 35, 35, 0.95) 100%);
+      backdrop-filter: blur(20px) saturate(1.8);
+      -webkit-backdrop-filter: blur(20px) saturate(1.8);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 50px;
+      padding: 8px 14px;
+      box-shadow: 
+        0 8px 32px rgba(0, 0, 0, 0.4),
+        0 2px 8px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      cursor: move;
+      user-select: none;
+      opacity: 1;
       z-index: 1000;
+      min-height: 48px;
+      transform: translateZ(0); /* Hardware acceleration */
+    }
+    
+    .floating-toolbar:hover {
+      background: linear-gradient(135deg, 
+        rgba(35, 35, 35, 0.95) 0%, 
+        rgba(55, 55, 55, 0.95) 50%, 
+        rgba(45, 45, 45, 0.95) 100%);
+      transform: translateY(-2px) scale(1.02) translateZ(0);
+      box-shadow: 
+        0 16px 64px rgba(0, 0, 0, 0.5),
+        0 4px 16px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.3);
+    }
+    
+    .floating-toolbar.dashboard-open {
+      border-bottom-left-radius: 16px;
+      border-bottom-right-radius: 16px;
+      border-bottom: none;
+      margin-bottom: 0;
+      transform: translateY(-1px) translateZ(0);
+    }
+    
+    .smart-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: linear-gradient(45deg, #00ff87, #60efff);
+      margin-right: 12px;
+      animation: liquidPulse 3s ease-in-out infinite;
+      box-shadow: 
+        0 0 12px rgba(0, 255, 135, 0.6),
+        0 0 24px rgba(96, 239, 255, 0.3);
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      flex-shrink: 0;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .smart-indicator::before {
+      content: '';
+      position: absolute;
+      top: -2px;
+      left: -2px;
+      right: -2px;
+      bottom: -2px;
+      border-radius: 50%;
+      background: linear-gradient(45deg, #00ff87, #60efff);
+      opacity: 0.3;
+      animation: liquidRipple 3s ease-in-out infinite;
+      transform: scale(0);
+    }
+    
+    .smart-indicator.processing {
+      background: linear-gradient(45deg, #ff6b6b, #ffa726);
+      animation: liquidSpin 1s linear infinite, liquidPulse 2s ease-in-out infinite;
+      box-shadow: 
+        0 0 12px rgba(255, 107, 107, 0.6),
+        0 0 24px rgba(255, 167, 38, 0.3);
+    }
+    
+    .smart-indicator.idle {
+      background: linear-gradient(45deg, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.2));
+      animation: liquidFloat 4s ease-in-out infinite;
+      box-shadow: 
+        0 0 8px rgba(255, 255, 255, 0.2);
+    }
+    
+    @keyframes liquidPulse {
+      0%, 100% { 
+        transform: scale(1); 
+        opacity: 1; 
+      }
+      50% { 
+        transform: scale(1.3); 
+        opacity: 0.8; 
+      }
+    }
+    
+    @keyframes liquidRipple {
+      0% { 
+        transform: scale(0); 
+        opacity: 0.3; 
+      }
+      50% { 
+        transform: scale(2); 
+        opacity: 0.1; 
+      }
+      100% { 
+        transform: scale(3); 
+        opacity: 0; 
+      }
+    }
+    
+    @keyframes liquidSpin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    
+    @keyframes liquidFloat {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-1px); }
+    }
+    
+    .action-buttons {
+      display: flex;
+      gap: 8px;
+      flex: 1;
+      min-width: 0;
+    }
+    
+    .action-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 24px;
+      color: white;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      text-decoration: none;
+      white-space: nowrap;
+      flex: 1;
+      justify-content: center;
+      min-width: 0;
+      outline: none;
+      position: relative;
+      overflow: hidden;
+      transform: translateZ(0);
+    }
+    
+    .action-btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, 
+        transparent, 
+        rgba(255, 255, 255, 0.1), 
+        transparent);
+      transition: left 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    
+    .action-btn:hover::before {
+      left: 100%;
+    }
+    
+    .action-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.25);
+      transform: translateY(-2px) scale(1.02) translateZ(0);
+      box-shadow: 
+        0 8px 24px rgba(0, 0, 0, 0.3),
+        0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+    
+    .action-btn:active {
+      transform: translateY(0) scale(0.98) translateZ(0);
+      transition: all 0.1s ease;
+    }
+    
+    .action-btn.primary {
+      background: linear-gradient(135deg, #00d4ff 0%, #00ff87 100%);
+      border-color: rgba(0, 212, 255, 0.5);
+      color: #000;
+      font-weight: 600;
+      box-shadow: 
+        0 4px 16px rgba(0, 212, 255, 0.3),
+        0 2px 8px rgba(0, 255, 135, 0.2);
+    }
+    
+    .action-btn.primary:hover {
+      background: linear-gradient(135deg, #00b8e6 0%, #00e671 100%);
+      border-color: rgba(0, 212, 255, 0.7);
+      color: #000;
+      box-shadow: 
+        0 12px 32px rgba(0, 212, 255, 0.4),
+        0 4px 16px rgba(0, 255, 135, 0.3);
+      transform: translateY(-3px) scale(1.05) translateZ(0);
+    }
+    
+    .dashboard-toggle {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      min-width: 40px;
+      padding: 10px 12px;
+      margin-left: 4px;
+    }
+    
+    .dashboard-toggle:hover {
+      background: rgba(255, 255, 255, 0.12);
+    }
+    
+    .dashboard-toggle.active {
+      background: linear-gradient(135deg, #00d4ff 0%, #00ff87 100%);
+      border-color: rgba(0, 212, 255, 0.5);
+      color: #000;
+      box-shadow: 
+        0 4px 16px rgba(0, 212, 255, 0.3),
+        0 2px 8px rgba(0, 255, 135, 0.2);
+    }
+    
+    .dashboard-toggle.active:hover {
+      background: linear-gradient(135deg, #00b8e6 0%, #00e671 100%);
+      transform: translateY(-2px) scale(1.05) translateZ(0);
+    }
+    
+    .icon {
+      width: 14px;
+      height: 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+      flex-shrink: 0;
+      pointer-events: none;
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    
+    .action-btn:hover .icon {
+      transform: scale(1.1) translateZ(0);
+    }
+    
+    .status-text {
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.9);
+      margin-left: 8px;
+      min-width: 40px;
+      text-align: center;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      flex-shrink: 0;
+      pointer-events: none;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+      font-weight: 500;
+    }
+    
+    /* Liquid Dashboard Dropdown */
+    .dashboard-dropdown {
+      position: relative;
+      background: linear-gradient(180deg, 
+        rgba(35, 35, 35, 0.95) 0%, 
+        rgba(26, 26, 26, 0.95) 100%);
+      backdrop-filter: blur(20px) saturate(1.8);
+      -webkit-backdrop-filter: blur(20px) saturate(1.8);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-top: none;
+      border-radius: 0 0 20px 20px;
+      margin-top: -1px;
+      max-height: 0;
+      overflow: hidden;
+      transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 
+        0 12px 48px rgba(0, 0, 0, 0.4),
+        0 4px 16px rgba(0, 0, 0, 0.2);
+      z-index: 999;
+      opacity: 0;
+      transform: translateY(-10px) translateZ(0);
+    }
+    
+    .dashboard-dropdown.open {
+      max-height: 400px;
+      opacity: 1;
+      transform: translateY(0) translateZ(0);
+    }
+    
+    /* Tab Navigation */
+    .dashboard-tabs {
+      display: flex;
+      background: rgba(0, 0, 0, 0.2);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 0 8px;
+    }
+    
+    .dashboard-tab {
+      flex: 1;
+      padding: 12px 16px;
+      text-align: center;
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      border-bottom: 2px solid transparent;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .dashboard-tab::before {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: linear-gradient(90deg, #00d4ff, #00ff87);
+      transform: scaleX(0);
+      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    
+    .dashboard-tab.active {
+      color: white;
+      background: rgba(255, 255, 255, 0.05);
+    }
+    
+    .dashboard-tab.active::before {
+      transform: scaleX(1);
+    }
+    
+    .dashboard-tab:hover {
+      color: rgba(255, 255, 255, 0.9);
+      background: rgba(255, 255, 255, 0.03);
+    }
+    
+    /* Tab Content */
+    .tab-content {
       display: none;
+      animation: liquidSlideIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
     }
     
-    .modal {
-      background-color: #fff;
-      border-radius: 8px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-      width: 500px;
-      max-width: 90%;
-      max-height: 90vh;
-      overflow-y: auto;
+    .tab-content.active {
+      display: block;
     }
     
-    .modal-header {
-      padding: 15px 20px;
-      border-bottom: 1px solid #eee;
+    @keyframes liquidSlideIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .tab-header {
+      padding: 14px 18px 10px;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      background: rgba(0, 0, 0, 0.15);
     }
     
-    .modal-title {
-      margin: 0;
-      font-size: 18px;
+    .tab-title {
+      color: white;
+      font-size: 13px;
       font-weight: 600;
+      margin: 0;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
     }
     
-    .modal-close {
-      background: none;
-      border: none;
-      font-size: 20px;
-      cursor: pointer;
-      color: #666;
-    }
-    
-    .modal-body {
-      padding: 20px;
-    }
-    
-    .modal-footer {
-      padding: 15px 20px;
-      border-top: 1px solid #eee;
+    .tab-actions {
       display: flex;
-      justify-content: flex-end;
-      gap: 10px;
+      gap: 6px;
     }
     
-    .form-group {
-      margin-bottom: 15px;
-    }
-    
-    .form-group label {
-      display: block;
-      margin-bottom: 5px;
+    .tab-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: white;
+      padding: 5px 12px;
+      border-radius: 12px;
+      font-size: 10px;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
       font-weight: 500;
-      color: #555;
     }
     
-    .form-group input,
-    .form-group select,
-    .form-group textarea {
+    .tab-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-1px) scale(1.02) translateZ(0);
+    }
+    
+    .tab-btn:active {
+      transform: translateY(0) scale(0.98) translateZ(0);
+    }
+    
+    /* Grid Layouts */
+    .content-grid {
+      padding: 16px 18px;
+      height: 280px;
+      overflow-y: auto;
+    }
+    
+    .screenshot-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+      gap: 12px;
+    }
+    
+    .internship-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    /* Screenshot Cards */
+    .screenshot-card {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      overflow: hidden;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      cursor: pointer;
+      transform: translateZ(0);
+    }
+    
+    .screenshot-card:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-4px) scale(1.02) translateZ(0);
+      box-shadow: 
+        0 8px 24px rgba(0, 0, 0, 0.3),
+        0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+    
+    .screenshot-preview {
       width: 100%;
-      padding: 8px 12px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      font-size: 14px;
-      box-sizing: border-box;
+      height: 70px;
+      background: linear-gradient(135deg, #0d0d0d, #1a1a1a);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
     }
     
-    .form-group textarea {
-      min-height: 100px;
-      resize: vertical;
+    .screenshot-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    
+    .screenshot-card:hover .screenshot-preview img {
+      transform: scale(1.05) translateZ(0);
+    }
+    
+    .screenshot-info {
+      padding: 8px;
+    }
+    
+    .screenshot-name {
+      color: white;
+      font-size: 9px;
+      font-weight: 500;
+      margin: 0 0 4px 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    }
+    
+    .screenshot-date {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 8px;
+      margin: 0;
+    }
+    
+    /* Internship Cards */
+    .internship-card {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      padding: 12px;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      cursor: pointer;
+      transform: translateZ(0);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .internship-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 3px;
+      height: 100%;
+      background: linear-gradient(180deg, #00d4ff, #00ff87);
+      transform: scaleY(0);
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    
+    .internship-card:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px) scale(1.01) translateZ(0);
+      box-shadow: 
+        0 6px 20px rgba(0, 0, 0, 0.2),
+        0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    .internship-card:hover::before {
+      transform: scaleY(1);
+    }
+    
+    .internship-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 6px;
+    }
+    
+    .internship-company {
+      color: white;
+      font-size: 11px;
+      font-weight: 600;
+      margin: 0;
+    }
+    
+    .internship-status {
+      padding: 2px 8px;
+      border-radius: 8px;
+      font-size: 8px;
+      font-weight: 500;
+      text-transform: uppercase;
+    }
+    
+    .status-interested { background: rgba(74, 134, 232, 0.2); color: #4a86e8; }
+    .status-applied { background: rgba(255, 193, 7, 0.2); color: #ffc107; }
+    .status-interviewing { background: rgba(23, 162, 184, 0.2); color: #17a2b8; }
+    .status-rejected { background: rgba(220, 53, 69, 0.2); color: #dc3545; }
+    .status-accepted { background: rgba(40, 167, 69, 0.2); color: #28a745; }
+    
+    .internship-title {
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 10px;
+      margin: 0 0 4px 0;
+      font-weight: 400;
+    }
+    
+    .internship-date {
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 8px;
+      margin: 0;
+    }
+    
+    /* Loading and Empty States */
+    .loading-state,
+    .empty-state {
+      padding: 32px 16px;
+      text-align: center;
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 11px;
+      grid-column: 1 / -1;
+    }
+    
+    .loading-state {
+      animation: liquidPulse 2s ease-in-out infinite;
+    }
+    
+    /* Context Menu */
+    .context-menu {
+      position: absolute;
+      top: calc(100% + 12px);
+      right: 0;
+      background: linear-gradient(135deg, 
+        rgba(26, 26, 26, 0.95) 0%, 
+        rgba(45, 45, 45, 0.95) 100%);
+      backdrop-filter: blur(20px) saturate(1.8);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      padding: 8px;
+      min-width: 150px;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(-10px) scale(0.95) translateZ(0);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 1001;
+      box-shadow: 
+        0 12px 48px rgba(0, 0, 0, 0.4),
+        0 4px 16px rgba(0, 0, 0, 0.2);
+    }
+    
+    .context-menu.active {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0) scale(1) translateZ(0);
+    }
+    
+    .context-item {
+      padding: 10px 12px;
+      color: white;
+      font-size: 12px;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .context-item:hover {
+      background: rgba(255, 255, 255, 0.1);
+      transform: translateX(2px) translateZ(0);
+    }
+    
+    /* Hint Bubble */
+    .hint-bubble {
+      position: absolute;
+      top: -40px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(135deg, 
+        rgba(26, 26, 26, 0.95) 0%, 
+        rgba(45, 45, 45, 0.95) 100%);
+      backdrop-filter: blur(20px) saturate(1.8);
+      color: white;
+      padding: 6px 12px;
+      border-radius: 18px;
+      font-size: 10px;
+      white-space: nowrap;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      pointer-events: none;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      z-index: 1002;
+      box-shadow: 
+        0 8px 24px rgba(0, 0, 0, 0.3),
+        0 2px 8px rgba(0, 0, 0, 0.2);
+      font-weight: 500;
+    }
+    
+    .hint-bubble.show {
+      opacity: 1;
+      visibility: visible;
+      transform: translateX(-50%) translateY(-4px) translateZ(0);
+    }
+    
+    .hint-bubble::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 5px solid transparent;
+      border-top-color: rgba(26, 26, 26, 0.95);
+    }
+    
+    /* Scrollbar styling */
+    .content-grid::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    .content-grid::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 3px;
+    }
+    
+    .content-grid::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, #00d4ff, #00ff87);
+      border-radius: 3px;
+    }
+    
+    .content-grid::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(180deg, #00b8e6, #00e671);
+    }
+    
+    /* Keyboard focus styles */
+    .action-btn:focus,
+    .tab-btn:focus,
+    .dashboard-tab:focus {
+      outline: 2px solid rgba(0, 212, 255, 0.5);
+      outline-offset: 2px;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <header>
-      <h1>Internship Tracker</h1>
-      <button id="addInternshipBtn" class="primary">Add Internship</button>
-    </header>
-    
-    <div class="filters">
-      <div class="filter-group">
-        <span class="filter-label">Status:</span>
-        <select id="statusFilter">
-          <option value="all">All Statuses</option>
-          <option value="interested">Interested</option>
-          <option value="applied">Applied</option>
-          <option value="interviewing">Interviewing</option>
-          <option value="rejected">Rejected</option>
-          <option value="accepted">Accepted</option>
-        </select>
+  <div class="toolbar-container">
+    <div class="floating-toolbar" id="toolbar">
+      <div class="smart-indicator" id="statusIndicator"></div>
+      <div class="action-buttons">
+        <button class="action-btn primary" id="captureBtn" tabindex="1">
+          <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+            <circle cx="12" cy="13" r="4"></circle>
+          </svg>
+          Capture
+        </button>
+        <button class="action-btn" id="analyzeBtn" tabindex="2">
+          <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+          </svg>
+          Analyze
+        </button>
+        <button class="action-btn dashboard-toggle" id="dashboardToggle" tabindex="3">
+          <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="9" y1="9" x2="19" y2="9"></line>
+            <line x1="9" y1="15" x2="19" y2="15"></line>
+            <line x1="5" y1="9" x2="5" y2="9"></line>
+            <line x1="5" y1="15" x2="5" y2="15"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="status-text" id="statusText">Ready</div>
+      
+      <!-- Context Menu -->
+      <div class="context-menu" id="contextMenu">
+        <div class="context-item" data-action="settings">
+          ⚙️ Settings
+        </div>
+        <div class="context-item" data-action="hide">
+          👁️ Hide
+        </div>
       </div>
       
-      <div class="filter-group">
-        <span class="filter-label">Search:</span>
-        <input type="text" id="searchFilter" placeholder="Company or position...">
-      </div>
-      
-      <button id="clearFiltersBtn">Clear Filters</button>
+      <!-- Smart Hint Bubble -->
+      <div class="hint-bubble" id="hintBubble"></div>
     </div>
     
-    <div id="internshipTableContainer">
-      <div class="loading">Loading internships...</div>
-    </div>
-  </div>
-  
-  <!-- Edit Internship Modal -->
-  <div id="editModal" class="modal-overlay">
-    <div class="modal">
-      <div class="modal-header">
-        <h3 class="modal-title">Edit Internship</h3>
-        <button class="modal-close">&times;</button>
+    <!-- Liquid Dashboard Dropdown -->
+    <div class="dashboard-dropdown" id="dashboardDropdown">
+      <!-- Tab Navigation -->
+      <div class="dashboard-tabs">
+        <div class="dashboard-tab active" data-tab="screenshots">
+          📸 Screenshots
+        </div>
+        <div class="dashboard-tab" data-tab="internships">
+          💼 Internships
+        </div>
       </div>
-      <div class="modal-body">
-        <form id="editForm">
-          <input type="hidden" id="editId">
-          
-          <div class="form-group">
-            <label for="editCompany">Company</label>
-            <input type="text" id="editCompany" required>
+      
+      <!-- Screenshots Tab -->
+      <div class="tab-content active" id="screenshotsTab">
+        <div class="tab-header">
+          <h3 class="tab-title">Recent Screenshots</h3>
+          <div class="tab-actions">
+            <button class="tab-btn" id="refreshScreenshots">↻ Refresh</button>
+            <button class="tab-btn" id="clearScreenshots">🗑️ Clear</button>
           </div>
-          
-          <div class="form-group">
-            <label for="editTitle">Position</label>
-            <input type="text" id="editTitle" required>
+        </div>
+        <div class="content-grid">
+          <div class="screenshot-grid" id="screenshotGrid">
+            <div class="loading-state">Loading screenshots...</div>
           </div>
-          
-          <div class="form-group">
-            <label for="editLocation">Location</label>
-            <input type="text" id="editLocation">
-          </div>
-          
-          <div class="form-group">
-            <label for="editStatus">Status</label>
-            <select id="editStatus">
-              <option value="interested">Interested</option>
-              <option value="applied">Applied</option>
-              <option value="interviewing">Interviewing</option>
-              <option value="rejected">Rejected</option>
-              <option value="accepted">Accepted</option>
-            </select>
-          </div>
-          
-          <div class="form-group">
-            <label for="editNotes">Notes</label>
-            <textarea id="editNotes"></textarea>
-          </div>
-        </form>
+        </div>
       </div>
-      <div class="modal-footer">
-        <button class="modal-close secondary">Cancel</button>
-        <button id="saveInternshipBtn" class="primary">Save</button>
+      
+      <!-- Internships Tab -->
+      <div class="tab-content" id="internshipsTab">
+        <div class="tab-header">
+          <h3 class="tab-title">Job Applications</h3>
+          <div class="tab-actions">
+            <button class="tab-btn" id="addInternship">+ Add</button>
+            <button class="tab-btn" id="refreshInternships">↻ Refresh</button>
+          </div>
+        </div>
+        <div class="content-grid">
+          <div class="internship-grid" id="internshipGrid">
+            <div class="loading-state">Loading internships...</div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
-  
-  <script src="tracker.js"></script>
+
+  <script src="toolbar.js"></script>
 </body>
-</html> 
+</html>

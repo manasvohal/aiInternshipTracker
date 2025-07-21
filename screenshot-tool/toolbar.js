@@ -14,6 +14,18 @@ const screenshotGrid = document.getElementById('screenshotGrid');
 const refreshDashboard = document.getElementById('refreshDashboard');
 const clearAll = document.getElementById('clearAll');
 
+// New dashboard elements
+const dashboardTabs = document.querySelectorAll('.dashboard-tab');
+const addInternshipBtn = document.getElementById('addInternship');
+const screenshotsTab = document.getElementById('screenshotsTab');
+const internshipsTab = document.getElementById('internshipsTab');
+
+// Internship elements
+const totalInternships = document.getElementById('totalInternships');
+const pendingInternships = document.getElementById('pendingInternships');
+const interviewInternships = document.getElementById('interviewInternships');
+const internshipList = document.getElementById('internshipList');
+
 // State management
 let currentStatus = 'ready';
 let isProcessing = false;
@@ -21,6 +33,8 @@ let fadeTimeout = null;
 let hintTimeout = null;
 let contextDetection = null;
 let isDashboardOpen = false;
+let currentTab = 'screenshots';
+let internshipData = [];
 
 // Initialize toolbar
 document.addEventListener('DOMContentLoaded', () => {
@@ -28,12 +42,15 @@ document.addEventListener('DOMContentLoaded', () => {
   setupEventListeners();
   startContextDetection();
   loadDashboardScreenshots();
+  loadInternshipData(); // Load internship data on startup
   
   // Test dashboard functionality on load
   console.log('Dashboard elements found:', {
     dropdown: !!dashboardDropdown,
     toggle: !!dashboardToggle,
-    grid: !!screenshotGrid
+    grid: !!screenshotGrid,
+    tabs: dashboardTabs.length,
+    internships: !!internshipsTab,
   });
 });
 
@@ -64,19 +81,34 @@ function setupEventListeners() {
     toggleDashboard();
   });
   
+  // Dashboard tabs
+  dashboardTabs.forEach(tab => {
+    tab.addEventListener('click', (e) => {
+      e.stopPropagation();
+      switchTab(tab.dataset.tab);
+    });
+  });
+  
   // Dashboard actions
   if (refreshDashboard) {
     refreshDashboard.addEventListener('click', (e) => {
       e.stopPropagation();
-      loadDashboardScreenshots();
+      refreshCurrentTab();
       showHint('Dashboard refreshed');
+    });
+  }
+  
+  if (addInternshipBtn) {
+    addInternshipBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      addInternshipManually();
     });
   }
   
   if (clearAll) {
     clearAll.addEventListener('click', (e) => {
       e.stopPropagation();
-      clearAllScreenshots();
+      clearCurrentTabData();
     });
   }
   
@@ -349,8 +381,15 @@ async function handleCapture(shouldAnalyze = false) {
       
       if (shouldAnalyze && filePath) {
         setStatus('analyzing');
-        await window.electron.processJobInfo(filePath);
-        showHint('Job analysis complete!');
+        const jobData = await window.electron.processJobInfo(filePath);
+        
+        // Automatically add to internship tracker if job data was extracted
+        if (jobData && jobData.company && jobData.company !== 'Unknown Company') {
+          addInternshipFromJobData(jobData);
+          showHint(`Job analysis complete! Added ${jobData.company} to tracker.`);
+        } else {
+          showHint('Job analysis complete!');
+        }
       } else {
         showHint('Screenshot captured!');
         // Auto-open dashboard to show new screenshot
@@ -392,15 +431,15 @@ function openDashboard() {
   dashboardToggle.classList.add('active');
   
   // Force the dropdown to be visible
-  dashboardDropdown.style.maxHeight = '300px'; // Compact design height
+  dashboardDropdown.style.maxHeight = '320px'; // Compact natural height
   dashboardDropdown.style.opacity = '1';
   
   // Resize window to accommodate compact dashboard
   if (window.electron && window.electron.resizeWindow) {
-    window.electron.resizeWindow(400, 365); // Compact total height
+    window.electron.resizeWindow(420, 390); // Compact and natural sizing
   }
   
-  loadDashboardScreenshots();
+  loadCurrentTabData();
   showHint('Dashboard opened');
   console.log('Dashboard should now be visible');
 }
@@ -424,6 +463,229 @@ function closeDashboard() {
   if (window.electron && window.electron.resizeWindow) {
     window.electron.resizeWindow(400, 57); // Compact toolbar height
   }
+}
+
+// Tab Management
+function switchTab(tabName) {
+  // Update tab active state
+  dashboardTabs.forEach(tab => {
+    tab.classList.toggle('active', tab.dataset.tab === tabName);
+  });
+  
+  // Update content visibility
+  screenshotsTab.classList.toggle('hidden', tabName !== 'screenshots');
+  internshipsTab.classList.toggle('hidden', tabName !== 'internships');
+  
+  // Update action buttons
+  addInternshipBtn.style.display = tabName === 'internships' ? 'block' : 'none';
+  
+  currentTab = tabName;
+  loadCurrentTabData();
+  showHint(`Switched to ${tabName}`);
+}
+
+function refreshCurrentTab() {
+  loadCurrentTabData();
+}
+
+function loadCurrentTabData() {
+  switch (currentTab) {
+    case 'screenshots':
+      loadDashboardScreenshots();
+      break;
+    case 'internships':
+      loadInternshipData();
+      break;
+  }
+}
+
+function clearCurrentTabData() {
+  switch (currentTab) {
+    case 'screenshots':
+      clearAllScreenshots();
+      break;
+    case 'internships':
+      clearAllInternships();
+      break;
+  }
+}
+
+// Internship Management
+async function loadInternshipData() {
+  try {
+    console.log('Loading internship data...');
+    
+    // Load from localStorage or electron store
+    const storedData = localStorage.getItem('internshipData');
+    if (storedData) {
+      internshipData = JSON.parse(storedData);
+    }
+    
+    // Also try to get from electron if available
+    if (window.electron && window.electron.getInternships) {
+      const electronData = await window.electron.getInternships();
+      if (electronData && electronData.length > 0) {
+        internshipData = electronData;
+      }
+    }
+    
+    updateInternshipStats();
+    renderInternshipList();
+    
+  } catch (error) {
+    console.error('Error loading internship data:', error);
+    showHint('Error loading internships');
+  }
+}
+
+function updateInternshipStats() {
+  const total = internshipData.length;
+  const pending = internshipData.filter(i => i.status === 'applied' || i.status === 'pending').length;
+  const interviews = internshipData.filter(i => i.status === 'interview').length;
+  
+  totalInternships.textContent = total;
+  pendingInternships.textContent = pending;
+  interviewInternships.textContent = interviews;
+}
+
+function renderInternshipList() {
+  if (internshipData.length === 0) {
+    internshipList.innerHTML = `
+      <div class="empty-state">
+        <p>No internships tracked yet.<br>Analyze a job posting to get started!</p>
+      </div>
+    `;
+    return;
+  }
+  
+  // Sort by date (newest first)
+  const sortedInternships = [...internshipData].sort((a, b) => 
+    new Date(b.dateAdded || b.timestamp) - new Date(a.dateAdded || a.timestamp)
+  );
+  
+  internshipList.innerHTML = sortedInternships.map(internship => `
+    <div class="internship-item" data-id="${internship.id}">
+      <div class="internship-info">
+        <div class="company-name">${internship.company || 'Unknown Company'}</div>
+        <div class="job-details">
+          ${internship.jobTitle || 'Position'} • ${formatDate(internship.dateAdded)}
+        </div>
+      </div>
+      <div class="status ${internship.status || 'applied'}">${(internship.status || 'applied').toUpperCase()}</div>
+    </div>
+  `).join('');
+  
+  // Add click handlers
+  internshipList.querySelectorAll('.internship-item').forEach(item => {
+    item.addEventListener('click', (e) => {
+      e.stopPropagation();
+      editInternship(item.dataset.id);
+    });
+  });
+}
+
+function addInternshipFromJobData(jobData) {
+  const internship = {
+    id: generateId(),
+    company: jobData.company || 'Unknown Company',
+    jobTitle: jobData.jobTitle || 'Position',
+    location: jobData.location || 'Not specified',
+    salary: jobData.salary || 'Not specified',
+    status: 'applied',
+    dateAdded: new Date().toISOString(),
+    applicationDeadline: jobData.applicationInfo?.deadline || null,
+    jobData: jobData // Store full job data
+  };
+  
+  internshipData.push(internship);
+  saveInternshipData();
+  
+  if (currentTab === 'internships') {
+    updateInternshipStats();
+    renderInternshipList();
+  }
+  
+  showHint(`Added ${internship.company} to tracking!`);
+}
+
+function addInternshipManually() {
+  const company = prompt('Company name:');
+  if (!company) return;
+  
+  const jobTitle = prompt('Job title:') || 'Position';
+  const status = prompt('Status (applied/interview/offer/rejected):') || 'applied';
+  
+  const internship = {
+    id: generateId(),
+    company: company.trim(),
+    jobTitle: jobTitle.trim(),
+    status: status.toLowerCase().trim(),
+    dateAdded: new Date().toISOString(),
+    manual: true
+  };
+  
+  internshipData.push(internship);
+  saveInternshipData();
+  updateInternshipStats();
+  renderInternshipList();
+  
+  showHint(`Added ${company} manually!`);
+}
+
+function editInternship(id) {
+  const internship = internshipData.find(i => i.id === id);
+  if (!internship) return;
+  
+  const newStatus = prompt(`Update status for ${internship.company}:\n\nCurrent: ${internship.status}\n\nOptions: applied, interview, offer, rejected`);
+  if (!newStatus) return;
+  
+  internship.status = newStatus.toLowerCase().trim();
+  internship.lastUpdated = new Date().toISOString();
+  
+  saveInternshipData();
+  updateInternshipStats();
+  renderInternshipList();
+  
+  showHint(`Updated ${internship.company} status`);
+}
+
+function clearAllInternships() {
+  const confirmed = confirm('Clear all internship data? This cannot be undone.');
+  if (confirmed) {
+    internshipData = [];
+    saveInternshipData();
+    updateInternshipStats();
+    renderInternshipList();
+    showHint('All internships cleared');
+  }
+}
+
+function saveInternshipData() {
+  localStorage.setItem('internshipData', JSON.stringify(internshipData));
+  
+  // Also save to electron store if available
+  if (window.electron && window.electron.saveInternships) {
+    window.electron.saveInternships(internshipData);
+  }
+}
+
+// Utility functions
+function generateId() {
+  return Date.now().toString(36) + Math.random().toString(36).substr(2);
+}
+
+function formatDate(dateString, short = false) {
+  if (!dateString) return 'No date';
+  
+  const date = new Date(dateString);
+  if (short) {
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+  return date.toLocaleDateString('en-US', { 
+    month: 'short', 
+    day: 'numeric',
+    year: date.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+  });
 }
 
 async function loadDashboardScreenshots() {

@@ -1,8 +1,10 @@
-const { app, BrowserWindow, ipcMain, desktopCapturer, Menu, Tray, shell, dialog, nativeImage, globalShortcut, screen } = require('electron');
+const { app, BrowserWindow, ipcMain, globalShortcut, desktopCapturer, dialog, shell, screen, nativeImage } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const Store = require('electron-store');
-const { extractTextFromImage, extractJobInformation } = require('./services/aiService');
+
+// Import only OCR function - no AI dependencies
+const { extractTextFromImage } = require('./services/aiService');
 
 // Initialize store for settings and screenshot database
 const store = new Store();
@@ -508,29 +510,76 @@ async function saveScreenshot(dataURL) {
 // Process job information from screenshot
 async function processJobInfo(screenshotPath) {
   try {
-    dialog.showMessageBox({
+    // Show initial processing dialog
+    const progressDialog = dialog.showMessageBox({
       type: 'info',
-      title: 'Processing',
-      message: 'Extracting text and analyzing job information...',
+      title: 'Ultimate Tesseract OCR',
+      message: 'Extracting text with advanced OCR processing...\n\nThis may take a moment for maximum accuracy.',
       buttons: []
     });
     
-    const extractedText = await extractTextFromImage(screenshotPath);
+    console.log('🚀 Starting Ultimate Tesseract OCR...');
+    const startTime = Date.now();
     
-    if (!extractedText || extractedText.trim() === '') {
-      showNotification('Error', 'No text could be extracted from the image');
+    // Extract text using Ultimate Tesseract OCR system
+    const ocrResult = await extractTextFromImage(screenshotPath);
+    
+    const processingTime = Date.now() - startTime;
+    console.log(`⏱️ OCR completed in ${processingTime}ms`);
+    
+    // Close progress dialog and show results
+    if (progressDialog) {
+      dialog.showMessageBox({
+        type: 'info',
+        title: 'OCR Complete',
+        message: `Ultimate Tesseract OCR Complete!\n\n` +
+                `📊 Quality: ${ocrResult.qualityMetrics.quality.toUpperCase()}\n` +
+                `🎯 Confidence: ${ocrResult.confidence}%\n` +
+                `📝 Words extracted: ${ocrResult.wordCount}\n` +
+                `⚡ Processing time: ${processingTime}ms\n` +
+                `🔧 Best method: ${ocrResult.qualityMetrics.bestMethod}\n\n` +
+                `Now extracting job information...`,
+        buttons: ['OK']
+      });
+    }
+    
+    if (!ocrResult.text || ocrResult.text.trim() === '') {
+      showNotification('OCR Error', 'No text could be extracted from the image');
       return null;
     }
     
-    const jobData = await extractJobInformation(extractedText);
+    // Show detailed OCR quality report in console
+    console.log('📊 Ultimate OCR Quality Report:');
+    console.log(`   Text length: ${ocrResult.characterCount} characters`);
+    console.log(`   Word count: ${ocrResult.wordCount} words`);
+    console.log(`   Confidence: ${ocrResult.confidence}%`);
+    console.log(`   Quality: ${ocrResult.qualityMetrics.quality}`);
+    console.log(`   Best method: ${ocrResult.qualityMetrics.bestMethod}`);
+    console.log(`   Processing passes: ${ocrResult.qualityMetrics.passesUsed}`);
+    console.log(`   Consistency: ${ocrResult.qualityMetrics.consistency}`);
+    
+    // Extract job information using advanced pattern matching
+    console.log('🔍 Extracting job information with pattern matching...');
+    const jobData = extractJobInformationFromText(ocrResult.text);
     jobData.screenshotPath = screenshotPath;
+    jobData.ocrMetadata = ocrResult.metadata;
+    jobData.ocrQuality = ocrResult.qualityMetrics;
+    jobData.extractedText = ocrResult.text; // Include full extracted text
+    
+    // Show final results
+    console.log('✅ Job information extraction complete!');
+    console.log(`   Company: ${jobData.company}`);
+    console.log(`   Job Title: ${jobData.jobTitle}`);
+    console.log(`   Location: ${jobData.location}`);
+    console.log(`   Skills found: ${jobData.skills.length}`);
     
     createJobInfoWindow(jobData);
     
     return jobData;
+    
   } catch (error) {
-    console.error('Error processing job information:', error);
-    showNotification('Error', 'Failed to process job information');
+    console.error('❌ Job processing failed:', error);
+    showNotification('Processing Error', `Failed to process screenshot: ${error.message}`);
     return null;
   }
 }
@@ -580,6 +629,273 @@ function addInternshipToTracker(internshipData) {
     showNotification('Error', 'Failed to add internship to tracker');
     return null;
   }
+}
+
+// Advanced pattern matching for job information extraction
+function extractJobInformationFromText(text) {
+  console.log('🔍 Starting advanced pattern matching...');
+  
+  const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+  const cleanText = text.toLowerCase();
+  
+  // Advanced keyword dictionaries
+  const jobTitlePatterns = [
+    /\b(software engineer|software developer|frontend developer|backend developer|full[- ]?stack developer)\b/gi,
+    /\b(data scientist|data analyst|machine learning engineer|ai engineer)\b/gi,
+    /\b(product manager|project manager|program manager)\b/gi,
+    /\b(ux designer|ui designer|product designer|graphic designer)\b/gi,
+    /\b(devops engineer|site reliability engineer|cloud engineer)\b/gi,
+    /\b(qa engineer|test engineer|quality assurance)\b/gi,
+    /\b(intern|internship|summer intern|co-op)\b/gi,
+    /\b(junior|senior|lead|principal|staff|director)\s+(engineer|developer|designer|analyst)\b/gi
+  ];
+  
+  const companyPatterns = [
+    /\b([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+(?:Inc|Corp|Corporation|LLC|Ltd|Technologies|Tech|Labs|Systems|Solutions|Group)\b/g,
+    /^([A-Z][a-zA-Z\s&]+)(?:\s+is\s+hiring|\s+careers|\s+jobs)/gm,
+    /(?:Company|Organization|Employer):\s*([A-Z][a-zA-Z\s&]+)/gi,
+    /(?:at|@)\s+([A-Z][a-zA-Z\s&]+)(?:\s|$)/g
+  ];
+  
+  const locationPatterns = [
+    /\b(Remote|Hybrid|On-site)\b/gi,
+    /\b([A-Z][a-z]+,\s*[A-Z]{2})\b/g, // City, State
+    /\b([A-Z][a-z]+,\s*[A-Z][a-z]+)\b/g, // City, Country
+    /\b(San Francisco|New York|Seattle|Austin|Boston|Chicago|Los Angeles|Denver|Portland|Miami)\b/gi,
+    /\b(California|New York|Washington|Texas|Massachusetts|Illinois|Colorado|Oregon|Florida)\b/gi,
+    /\b(United States|USA|Canada|United Kingdom|UK|Germany|Netherlands|Australia)\b/gi
+  ];
+  
+  const salaryPatterns = [
+    /\$[\d,]+(?:\s*-\s*\$[\d,]+)?(?:\s*(?:per|\/)\s*(?:year|hour|month))?/gi,
+    /[\d,]+k(?:\s*-\s*[\d,]+k)?\s*(?:per\s*year|annually)?/gi,
+    /(?:salary|compensation|pay):\s*\$?[\d,]+(?:\s*-\s*\$?[\d,]+)?/gi,
+    /\b(unpaid|volunteer|academic credit|stipend)\b/gi
+  ];
+  
+  const skillPatterns = [
+    // Programming languages
+    /\b(JavaScript|TypeScript|Python|Java|C\+\+|C#|Go|Rust|Swift|Kotlin|PHP|Ruby|Scala|R)\b/gi,
+    // Frameworks and libraries
+    /\b(React|Angular|Vue|Node\.js|Express|Django|Flask|Spring|Laravel|Rails|jQuery)\b/gi,
+    // Databases
+    /\b(MySQL|PostgreSQL|MongoDB|Redis|SQLite|Oracle|SQL Server|DynamoDB|Cassandra)\b/gi,
+    // Cloud and DevOps
+    /\b(AWS|Azure|GCP|Google Cloud|Docker|Kubernetes|Jenkins|GitLab|CircleCI|Terraform)\b/gi,
+    // Tools and platforms
+    /\b(Git|GitHub|GitLab|Jira|Confluence|Slack|Figma|Adobe|Photoshop|Sketch)\b/gi,
+    // Other technical skills
+    /\b(API|REST|GraphQL|JSON|XML|HTML|CSS|SASS|SCSS|Webpack|Babel|npm|yarn)\b/gi
+  ];
+  
+  const requirementPatterns = [
+    /\b(?:bachelor|master|phd|degree)\s+(?:in|of)\s+([a-zA-Z\s]+)/gi,
+    /\b(\d+)\s*\+?\s*years?\s+(?:of\s+)?experience/gi,
+    /\brequired:\s*([^.]+)/gi,
+    /\bpreferred:\s*([^.]+)/gi,
+    /\bmust\s+have:\s*([^.]+)/gi,
+    /\bnice\s+to\s+have:\s*([^.]+)/gi
+  ];
+  
+  // Extract information using patterns
+  const extractedInfo = {
+    company: extractCompany(text, lines, companyPatterns),
+    jobTitle: extractJobTitle(text, lines, jobTitlePatterns),
+    location: extractLocation(text, locationPatterns),
+    salary: extractSalary(text, salaryPatterns),
+    jobType: determineJobType(cleanText),
+    workArrangement: determineWorkArrangement(text, locationPatterns),
+    skills: extractSkills(text, skillPatterns),
+    requirements: extractRequirements(text, requirementPatterns),
+    description: generateDescription(text, lines),
+    benefits: extractBenefits(cleanText),
+    applicationInfo: extractApplicationInfo(text),
+    department: determineDepartment(cleanText),
+    seniority: determineSeniority(cleanText)
+  };
+  
+  console.log('✅ Pattern matching extraction complete');
+  return extractedInfo;
+}
+
+// Helper functions for pattern matching
+function extractCompany(text, lines, patterns) {
+  // Try different strategies to find company name
+  
+  // Strategy 1: Look for common company patterns
+  for (const pattern of patterns) {
+    const matches = [...text.matchAll(pattern)];
+    if (matches.length > 0) {
+      const company = matches[0][1].trim();
+      if (company.length > 2 && company.length < 50) {
+        return company;
+      }
+    }
+  }
+  
+  // Strategy 2: Look in first few lines for company name
+  for (let i = 0; i < Math.min(5, lines.length); i++) {
+    const line = lines[i];
+    if (line.match(/^[A-Z][a-zA-Z\s&]{2,30}$/) && !line.match(/\b(job|position|role|career|apply|hiring)\b/i)) {
+      return line;
+    }
+  }
+  
+  // Strategy 3: Look for domain names
+  const domainMatch = text.match(/(?:https?:\/\/)?(?:www\.)?([a-zA-Z0-9-]+)\.com/);
+  if (domainMatch) {
+    const domain = domainMatch[1];
+    return domain.charAt(0).toUpperCase() + domain.slice(1);
+  }
+  
+  return 'Company not specified';
+}
+
+function extractJobTitle(text, lines, patterns) {
+  // Look for job title patterns
+  for (const pattern of patterns) {
+    const matches = [...text.matchAll(pattern)];
+    if (matches.length > 0) {
+      return matches[0][0].trim();
+    }
+  }
+  
+  // Look in first few lines for job title
+  for (let i = 0; i < Math.min(3, lines.length); i++) {
+    const line = lines[i];
+    if (line.match(/\b(engineer|developer|designer|analyst|manager|intern)\b/i)) {
+      return line;
+    }
+  }
+  
+  return 'Position not specified';
+}
+
+function extractLocation(text, patterns) {
+  const locations = [];
+  
+  for (const pattern of patterns) {
+    const matches = [...text.matchAll(pattern)];
+    locations.push(...matches.map(m => m[0] || m[1]).filter(Boolean));
+  }
+  
+  // Remove duplicates and return best match
+  const uniqueLocations = [...new Set(locations)];
+  return uniqueLocations.length > 0 ? uniqueLocations[0] : 'Location not specified';
+}
+
+function extractSalary(text, patterns) {
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) {
+      return match[0];
+    }
+  }
+  return 'Salary not specified';
+}
+
+function extractSkills(text, patterns) {
+  const skills = new Set();
+  
+  for (const pattern of patterns) {
+    const matches = [...text.matchAll(pattern)];
+    matches.forEach(match => skills.add(match[0]));
+  }
+  
+  return Array.from(skills).slice(0, 20); // Limit to 20 skills
+}
+
+function extractRequirements(text, patterns) {
+  const requirements = [];
+  
+  for (const pattern of patterns) {
+    const matches = [...text.matchAll(pattern)];
+    requirements.push(...matches.map(m => m[0] || m[1]).filter(Boolean));
+  }
+  
+  return requirements.slice(0, 10); // Limit to 10 requirements
+}
+
+function determineJobType(cleanText) {
+  if (cleanText.includes('intern')) return 'Internship';
+  if (cleanText.includes('full-time') || cleanText.includes('fulltime')) return 'Full-time';
+  if (cleanText.includes('part-time') || cleanText.includes('parttime')) return 'Part-time';
+  if (cleanText.includes('contract')) return 'Contract';
+  if (cleanText.includes('temporary')) return 'Temporary';
+  return 'Not specified';
+}
+
+function determineWorkArrangement(text, locationPatterns) {
+  const lowerText = text.toLowerCase();
+  if (lowerText.includes('remote')) return 'Remote';
+  if (lowerText.includes('hybrid')) return 'Hybrid';
+  if (lowerText.includes('on-site') || lowerText.includes('onsite')) return 'On-site';
+  return 'Not specified';
+}
+
+function generateDescription(text, lines) {
+  // Find the longest meaningful paragraph
+  const paragraphs = text.split('\n\n').filter(p => p.trim().length > 50);
+  if (paragraphs.length > 0) {
+    return paragraphs[0].substring(0, 500) + (paragraphs[0].length > 500 ? '...' : '');
+  }
+  
+  // Fallback to first few lines
+  return lines.slice(0, 3).join(' ').substring(0, 300) + '...';
+}
+
+function extractBenefits(cleanText) {
+  const benefits = [];
+  const benefitKeywords = [
+    'health insurance', 'dental', 'vision', 'medical',
+    'vacation', 'pto', 'paid time off', 'holidays',
+    '401k', 'retirement', 'pension',
+    'stock options', 'equity', 'bonus',
+    'remote work', 'flexible hours', 'work from home',
+    'learning', 'training', 'education', 'tuition',
+    'gym', 'fitness', 'wellness'
+  ];
+  
+  benefitKeywords.forEach(keyword => {
+    if (cleanText.includes(keyword)) {
+      benefits.push(keyword);
+    }
+  });
+  
+  return benefits;
+}
+
+function extractApplicationInfo(text) {
+  const emailMatch = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+  const urlMatch = text.match(/https?:\/\/[^\s]+/);
+  const deadlineMatch = text.match(/(?:deadline|apply by|due):\s*([^.\n]+)/i);
+  
+  return {
+    contact: emailMatch ? emailMatch[0] : 'Not specified',
+    applyUrl: urlMatch ? urlMatch[0] : 'Not specified',
+    deadline: deadlineMatch ? deadlineMatch[1].trim() : 'Not specified',
+    process: 'Not specified'
+  };
+}
+
+function determineDepartment(cleanText) {
+  if (cleanText.includes('engineering') || cleanText.includes('software') || cleanText.includes('developer')) return 'Engineering';
+  if (cleanText.includes('product')) return 'Product';
+  if (cleanText.includes('design') || cleanText.includes('ux') || cleanText.includes('ui')) return 'Design';
+  if (cleanText.includes('data') || cleanText.includes('analytics')) return 'Data';
+  if (cleanText.includes('marketing')) return 'Marketing';
+  if (cleanText.includes('sales')) return 'Sales';
+  if (cleanText.includes('hr') || cleanText.includes('human resources')) return 'HR';
+  return 'Not specified';
+}
+
+function determineSeniority(cleanText) {
+  if (cleanText.includes('intern')) return 'Internship';
+  if (cleanText.includes('junior') || cleanText.includes('entry')) return 'Entry-level';
+  if (cleanText.includes('senior') || cleanText.includes('sr.')) return 'Senior';
+  if (cleanText.includes('lead') || cleanText.includes('principal')) return 'Lead';
+  if (cleanText.includes('director') || cleanText.includes('vp')) return 'Director';
+  return 'Mid-level';
 }
 
 // App lifecycle events

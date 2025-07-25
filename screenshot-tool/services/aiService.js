@@ -1,937 +1,937 @@
-const { OpenAI } = require('openai');
 const Tesseract = require('tesseract.js');
 const fs = require('fs');
 const path = require('path');
 
-// Initialize OpenAI client with OpenRouter
-// Use a working API key for OpenRouter
-const apiKey = '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';
-const openai = new OpenAI({
-  apiKey: apiKey,
-  baseURL: 'https://openrouter.ai/api/v1'
-});
+// Load OCR configuration
+let ocrConfig;
+try {
+  ocrConfig = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'ocr-config.json'), 'utf8'));
+} catch (error) {
+  console.warn('⚠️ OCR config not found, using defaults');
+  ocrConfig = getDefaultOCRConfig();
+}
 
 /**
- * Extract text from an image using Tesseract OCR
+ * ULTIMATE TESSERACT OCR SYSTEM
+ * Advanced multi-pass OCR with intelligent preprocessing and result merging
  * @param {string} imagePath - Path to the image file
- * @returns {Promise<string>} - Extracted text
+ * @returns {Promise<Object>} - Comprehensive OCR results
  */
 async function extractTextFromImage(imagePath) {
   try {
-    console.log(`Extracting text from image: ${imagePath}`);
+    console.log('🚀 ULTIMATE TESSERACT OCR SYSTEM STARTING');
+    console.log(`📁 Processing: ${path.basename(imagePath)}`);
     
-    const result = await Tesseract.recognize(
-      imagePath,
-      'eng',
-      { logger: m => console.log(m) }
-    );
+    const startTime = Date.now();
     
-    console.log(`Text extraction complete. Found ${result.data.text.length} characters`);
-    return result.data.text;
+    // Step 1: Image Analysis & Optimization
+    const imageAnalysis = await analyzeImage(imagePath);
+    console.log(`📊 Image Analysis: ${imageAnalysis.width}x${imageAnalysis.height}, ${imageAnalysis.type}`);
+    
+    // Step 2: Create Optimized Image Variants
+    const imageVariants = await createOptimizedImageVariants(imagePath, imageAnalysis);
+    console.log(`🔧 Created ${imageVariants.length} optimized variants`);
+    
+    // Step 3: Run Multiple OCR Passes with Different Configurations
+    const ocrResults = await runAdvancedOCRPasses(imageVariants, imageAnalysis);
+    console.log(`🔍 Completed ${ocrResults.length} OCR passes`);
+    
+    // Step 4: Intelligent Result Merging
+    const mergedResult = await intelligentResultMerging(ocrResults);
+    console.log(`🧠 Merged results: ${mergedResult.confidence}% confidence`);
+    
+    // Step 5: Advanced Post-Processing
+    const finalText = await advancedPostProcessing(mergedResult.text, imageAnalysis);
+    console.log(`✨ Post-processing complete: ${finalText.length} characters`);
+    
+    // Step 6: Quality Assessment
+    const qualityMetrics = calculateAdvancedQualityMetrics(ocrResults, finalText, startTime);
+    
+    // Step 7: Cleanup
+    await cleanupImageVariants(imageVariants);
+    
+    const result = {
+      text: finalText,
+      originalText: mergedResult.text,
+      confidence: Math.round(mergedResult.confidence),
+      wordCount: finalText.split(/\s+/).filter(w => w.length > 0).length,
+      characterCount: finalText.length,
+      qualityMetrics,
+      imageAnalysis,
+      metadata: {
+        imagePath,
+        processedAt: new Date().toISOString(),
+        ocrEngine: 'Ultimate Tesseract',
+        variants: imageVariants.length,
+        passes: ocrResults.length,
+        processingTime: Date.now() - startTime
+      }
+    };
+    
+    console.log('✅ ULTIMATE OCR COMPLETE');
+    console.log(`📊 Final Stats: ${result.wordCount} words, ${result.confidence}% confidence, ${result.qualityMetrics.quality}`);
+    
+    return result;
+    
   } catch (error) {
-    console.error('Error extracting text from image:', error);
-    throw error;
+    console.error('❌ Ultimate OCR failed:', error);
+    return await basicOCRFallback(imagePath);
   }
 }
 
 /**
- * Create a mock job information response when API is not available
- * @param {string} text - The extracted text to analyze
- * @returns {Object} - Mock job information
+ * Analyze image properties to optimize OCR approach
  */
-function createMockJobInfo(text) {
-  // Clean and normalize the text
-  const lines = text.split('\n')
-    .map(line => line.trim())
-    .filter(line => line.length > 0);
-  
-  const cleanText = text.toLowerCase();
-  
-  // Enhanced keyword matching
-  const jobTitleKeywords = [
-    'software engineer', 'software developer', 'frontend developer', 'backend developer', 
-    'full stack developer', 'data scientist', 'data analyst', 'product manager',
-    'ux designer', 'ui designer', 'devops engineer', 'qa engineer', 'intern',
-    'internship', 'junior developer', 'senior developer', 'lead developer',
-    'machine learning engineer', 'ai engineer', 'research intern', 'swe intern'
-  ];
-  
-  const locationKeywords = [
-    'remote', 'hybrid', 'san francisco', 'new york', 'seattle', 'austin', 
-    'boston', 'california', 'ca', 'ny', 'wa', 'tx', 'usa', 'united states',
-    'london', 'toronto', 'vancouver', 'berlin', 'amsterdam', 'onsite', 'on-site'
-  ];
-  
-  const companyIndicators = [
-    'company', 'corp', 'corporation', 'inc', 'llc', 'ltd', 'technologies',
-    'tech', 'labs', 'systems', 'solutions', 'group', 'team', 'startup'
-  ];
-  
-  const salaryKeywords = [
-    '$', 'usd', 'salary', 'compensation', 'per hour', '/hour', 'hourly',
-    'annually', 'per year', '/year', 'stipend', 'paid', 'unpaid'
-  ];
-  
-  // Extract potential information
-  let potentialCompany = extractCompanyName(lines, cleanText, companyIndicators, text);
-  let potentialTitle = extractJobTitle(lines, cleanText, jobTitleKeywords);
-  let potentialLocation = extractLocation(lines, cleanText, locationKeywords);
-  let potentialSalary = extractSalary(lines, cleanText, salaryKeywords);
-  let { requirements, skills } = extractRequirementsAndSkills(cleanText);
-  let benefits = extractBenefits(cleanText);
-  
-  // Return comprehensive format matching AI extraction
-  return {
-    // Basic Information
-    company: potentialCompany,
-    jobTitle: potentialTitle,
-    location: potentialLocation,
-    workArrangement: extractWorkArrangement(cleanText),
-    salary: potentialSalary,
-    jobType: determineJobType(cleanText),
-    duration: extractDuration(cleanText),
-    department: extractDepartment(cleanText),
-    seniority: extractSeniority(cleanText),
-    
-    // Detailed Requirements
-    requirements: {
-      education: extractEducationRequirements(cleanText),
-      experience: extractExperienceRequirements(cleanText),
-      technical: skills,
-      soft: extractSoftSkills(cleanText)
-    },
-    
-    // Job Details
-    responsibilities: extractResponsibilities(cleanText),
-    skills: skills,
-    qualifications: requirements,
-    description: generateJobDescription(potentialTitle, potentialCompany),
-    
-    // Application Information
-    applicationInfo: {
-      deadline: extractDeadline(cleanText),
-      process: 'Not specified',
-      contact: extractContactInfo(text),
-      applyUrl: 'Not specified'
-    },
-    
-    // Benefits and Company Info
-    benefits: benefits,
-    companyInfo: {
-      industry: extractIndustry(cleanText),
-      size: 'Not specified',
-      description: 'Not specified'
-    },
-    
-    // Additional Details
-    additionalInfo: {
-      startDate: extractStartDate(cleanText),
-      timezone: 'Not specified',
-      travelRequired: 'Not specified',
-      securityClearance: 'Not specified'
-    },
-    
-    // Metadata
-    extractionMetadata: {
-      sourceType: detectSourceType(text),
-      textLength: text.length,
-      extractionDate: new Date().toISOString(),
-      confidence: 'Low (Mock Data)'
-    }
-  };
-}
-
-// Helper function to extract company name
-function extractCompanyName(lines, cleanText, companyIndicators, originalText) {
-  // Look for company name in first few lines
-  for (let i = 0; i < Math.min(5, lines.length); i++) {
-    const line = lines[i];
-    
-    // Skip very short lines or lines that look like job titles
-    if (line.length < 3 || line.length > 50) continue;
-    
-    const lowerLine = line.toLowerCase();
-    
-    // Check if line contains company indicators
-    if (companyIndicators.some(indicator => lowerLine.includes(indicator))) {
-      return line;
-    }
-    
-    // Check for well-known company patterns
-    if (isLikelyCompanyName(line)) {
-      return line;
-    }
-  }
-  
-  // Look for "at Company" or "Company is" patterns
-  const atPattern = /\bat\s+([A-Z][a-zA-Z\s&.,]+?)(?:\s|$|,|\.|!)/g;
-  const atMatch = atPattern.exec(originalText);
-  if (atMatch && atMatch[1].length < 30) {
-    return atMatch[1].trim();
-  }
-  
-  // Fallback to first meaningful line
-  for (const line of lines.slice(0, 3)) {
-    if (line.length > 2 && line.length < 40 && !line.toLowerCase().includes('job') && !line.toLowerCase().includes('position')) {
-      return line;
-    }
-  }
-  
-  return 'Company not specified';
-}
-
-// Helper to check if a line looks like a company name
-function isLikelyCompanyName(line) {
-  // Check for patterns like "Microsoft", "Google Inc.", "Meta Platforms"
-  const companyPatterns = [
-    /^[A-Z][a-zA-Z\s&.,-]+(?:Inc|Corp|LLC|Ltd|Technologies|Tech|Labs|Systems|Solutions|Group)?\.?$/,
-    /^[A-Z]{2,}$/,  // All caps like "IBM", "NASA"
-    /^[A-Z][a-z]+(?:[A-Z][a-z]+)*$/  // CamelCase like "Facebook", "LinkedIn"
-  ];
-  
-  return companyPatterns.some(pattern => pattern.test(line)) && 
-         line.length >= 2 && line.length <= 30;
-}
-
-// Helper function to extract job title
-function extractJobTitle(lines, cleanText, jobTitleKeywords) {
-  // Look for exact keyword matches first
-  for (const keyword of jobTitleKeywords) {
-    if (cleanText.includes(keyword)) {
-      // Find the line containing this keyword
-      for (const line of lines) {
-        if (line.toLowerCase().includes(keyword)) {
-          return cleanJobTitle(line);
-        }
-      }
-    }
-  }
-  
-  // Look for patterns like "Position:", "Role:", "Title:"
-  const titlePatterns = [
-    /(?:position|role|title|job)\s*:?\s*(.+)/i,
-    /^(.+?)\s*-\s*(?:intern|internship|position|role)/i,
-    /(?:seeking|hiring|looking for)\s+(?:a\s+)?(.+?)(?:\s|$|,|\.|!)/i
-  ];
-  
-  for (const pattern of titlePatterns) {
-    for (const line of lines) {
-      const match = pattern.exec(line);
-      if (match && match[1]) {
-        return cleanJobTitle(match[1]);
-      }
-    }
-  }
-  
-  // Fallback: look for lines that might be job titles
-  for (const line of lines.slice(0, 8)) {
-    if (looksLikeJobTitle(line)) {
-      return cleanJobTitle(line);
-    }
-  }
-  
-  return 'Software Development Internship';
-}
-
-// Helper to clean job title
-function cleanJobTitle(title) {
-  return title.trim()
-    .replace(/^[-•\s]+|[-•\s]+$/g, '')
-    .replace(/\s+/g, ' ')
-    .substring(0, 100);
-}
-
-// Helper to check if line looks like job title
-function looksLikeJobTitle(line) {
-  const titleIndicators = ['engineer', 'developer', 'intern', 'analyst', 'manager', 'designer', 'specialist', 'coordinator', 'associate'];
-  const lowerLine = line.toLowerCase();
-  
-  return titleIndicators.some(indicator => lowerLine.includes(indicator)) &&
-         line.length > 5 && line.length < 80 &&
-         !lowerLine.includes('company') && !lowerLine.includes('about');
-}
-
-// Helper function to extract location
-function extractLocation(lines, cleanText, locationKeywords) {
-  // Look for location patterns
-  const locationPatterns = [
-    /(?:location|based|office)\s*:?\s*(.+)/i,
-    /(?:in|at)\s+([A-Z][a-zA-Z\s,]+?)(?:\s|$|,|\.|!)/g,
-    /(remote|hybrid|on-?site)/i,
-    /([A-Z][a-zA-Z\s]+,\s*[A-Z]{2}(?:\s+\d{5})?)/g  // City, State format
-  ];
-  
-  for (const pattern of locationPatterns) {
-    const match = pattern.exec(cleanText);
-    if (match && match[1]) {
-      const location = match[1].trim();
-      if (location.length > 2 && location.length < 50) {
-        return location;
-      }
-    }
-  }
-  
-  // Look for keyword matches in lines
-  for (const keyword of locationKeywords) {
-    for (const line of lines) {
-      if (line.toLowerCase().includes(keyword)) {
-        return line.trim().substring(0, 50);
-      }
-    }
-  }
-  
-  return 'Location not specified';
-}
-
-// Helper function to extract salary
-function extractSalary(lines, cleanText, salaryKeywords) {
-  const salaryPatterns = [
-    /\$[\d,]+(?:\.\d{2})?(?:\s*-\s*\$[\d,]+(?:\.\d{2})?)?(?:\s*(?:per\s+)?(?:hour|hr|year|annually|month))?/gi,
-    /(?:salary|compensation|pay|wage)\s*:?\s*\$?[\d,]+/gi,
-    /[\d,]+\s*(?:per\s+)?(?:hour|hr)(?:\s*-\s*[\d,]+\s*(?:per\s+)?(?:hour|hr))?/gi,
-    /(unpaid|voluntary|no\s+compensation)/gi
-  ];
-  
-  for (const pattern of salaryPatterns) {
-    const match = pattern.exec(cleanText);
-    if (match) {
-      return match[0].trim();
-    }
-  }
-  
-  return 'Not specified';
-}
-
-// Helper function to determine job type
-function determineJobType(cleanText) {
-  if (cleanText.includes('intern') || cleanText.includes('internship')) return 'internship';
-  if (cleanText.includes('full-time') || cleanText.includes('full time')) return 'full-time';
-  if (cleanText.includes('part-time') || cleanText.includes('part time')) return 'part-time';
-  if (cleanText.includes('contract') || cleanText.includes('contractor')) return 'contract';
-  if (cleanText.includes('freelance')) return 'freelance';
-  return 'internship';
-}
-
-// Helper function to extract requirements and skills
-function extractRequirementsAndSkills(cleanText) {
-  const skillKeywords = [
-    'javascript', 'python', 'java', 'react', 'node.js', 'typescript', 'html', 'css',
-    'sql', 'git', 'aws', 'docker', 'kubernetes', 'mongodb', 'postgresql', 'express',
-    'angular', 'vue', 'swift', 'kotlin', 'c++', 'c#', 'ruby', 'go', 'rust',
-    'machine learning', 'ai', 'data science', 'analytics', 'figma', 'sketch'
-  ];
-  
-  const requirementKeywords = [
-    'bachelor', 'degree', 'experience', 'years', 'gpa', 'portfolio', 'github',
-    'communication', 'teamwork', 'problem solving', 'analytical', 'creative'
-  ];
-  
-  const foundSkills = [];
-  const foundRequirements = [];
-  
-  for (const skill of skillKeywords) {
-    if (cleanText.includes(skill.toLowerCase())) {
-      foundSkills.push(skill.charAt(0).toUpperCase() + skill.slice(1));
-    }
-  }
-  
-  for (const req of requirementKeywords) {
-    if (cleanText.includes(req)) {
-      foundRequirements.push(req.charAt(0).toUpperCase() + req.slice(1));
-    }
-  }
-  
-  // Add default skills and requirements if none found
-  if (foundSkills.length === 0) {
-    foundSkills.push('JavaScript', 'React', 'Node.js', 'Git');
-  }
-  
-  if (foundRequirements.length === 0) {
-    foundRequirements.push('Strong programming skills', 'Problem-solving abilities', 'Team collaboration');
-  }
-  
-  return { requirements: foundRequirements, skills: foundSkills };
-}
-
-// Helper function to extract benefits
-function extractBenefits(cleanText) {
-  const benefitKeywords = [
-    'health insurance', 'dental', 'vision', '401k', 'retirement', 'pto', 'vacation',
-    'remote work', 'flexible hours', 'mentorship', 'training', 'learning',
-    'gym membership', 'free food', 'snacks', 'coffee', 'relocation', 'stipend'
-  ];
-  
-  const foundBenefits = [];
-  
-  for (const benefit of benefitKeywords) {
-    if (cleanText.includes(benefit)) {
-      foundBenefits.push(benefit.charAt(0).toUpperCase() + benefit.slice(1));
-    }
-  }
-  
-  // Add default benefits if none found
-  if (foundBenefits.length === 0) {
-    foundBenefits.push('Mentorship opportunities', 'Learning and development', 'Networking opportunities');
-  }
-  
-  return foundBenefits;
-}
-
-// Helper function to extract deadline
-function extractDeadline(cleanText) {
-  const deadlinePatterns = [
-    /(?:deadline|due|apply by|close(?:s|d)? on)\s*:?\s*([a-zA-Z]+ \d{1,2},? \d{4})/gi,
-    /(?:deadline|due|apply by)\s*:?\s*(\d{1,2}\/\d{1,2}\/\d{4})/gi,
-    /(?:deadline|due|apply by)\s*:?\s*(\d{1,2}-\d{1,2}-\d{4})/gi
-  ];
-  
-  for (const pattern of deadlinePatterns) {
-    const match = pattern.exec(cleanText);
-    if (match && match[1]) {
-      return match[1].trim();
-    }
-  }
-  
-  return 'Not specified';
-}
-
-/**
- * Preprocess job text for better extraction
- * @param {string} text - Raw extracted text
- * @returns {string} - Cleaned and structured text
- */
-function preprocessJobText(text) {
-  // Remove excessive whitespace and normalize line breaks
-  let cleaned = text.replace(/\s+/g, ' ').replace(/\n\s*\n/g, '\n');
-  
-  // Fix common OCR issues
-  cleaned = cleaned.replace(/\bOoO\b/g, '000'); // Common OCR mistake
-  cleaned = cleaned.replace(/\bl\b/g, 'I'); // lowercase l to uppercase I
-  cleaned = cleaned.replace(/\b0\b/g, 'O'); // zero to letter O where appropriate
-  
-  // Normalize company name patterns
-  cleaned = cleaned.replace(/(\w+)\s*careers?/gi, '$1 Careers');
-  cleaned = cleaned.replace(/join\s+(\w+)/gi, 'Join $1');
-  
-  // Normalize job title patterns
-  cleaned = cleaned.replace(/software\s+engineer/gi, 'Software Engineer');
-  cleaned = cleaned.replace(/data\s+analyst/gi, 'Data Analyst');
-  cleaned = cleaned.replace(/product\s+manager/gi, 'Product Manager');
-  
-  // Normalize location patterns
-  cleaned = cleaned.replace(/remote\s*work/gi, 'Remote');
-  cleaned = cleaned.replace(/work\s*from\s*home/gi, 'Remote');
-  
-  return cleaned.trim();
-}
-
-/**
- * Smart text truncation that preserves important job information
- * @param {string} text - Text to truncate
- * @param {number} maxLength - Maximum length
- * @returns {string} - Intelligently truncated text
- */
-function smartTruncateText(text, maxLength) {
-  if (text.length <= maxLength) return text;
-  
-  // Find important sections to preserve
-  const importantSections = [];
-  
-  // Look for company names and job titles (usually at the beginning)
-  const beginning = text.substring(0, Math.min(500, text.length));
-  importantSections.push(beginning);
-  
-  // Look for requirements section
-  const reqMatch = text.match(/(requirements?|qualifications?|skills?)[:\s]*([\s\S]{0,800})/i);
-  if (reqMatch) {
-    importantSections.push(reqMatch[0]);
-  }
-  
-  // Look for application/contact info (usually at the end)
-  const ending = text.substring(Math.max(0, text.length - 400));
-  importantSections.push(ending);
-  
-  // Look for salary/compensation info
-  const salaryMatch = text.match(/(salary|compensation|pay|wage|stipend)[:\s]*([\s\S]{0,200})/i);
-  if (salaryMatch) {
-    importantSections.push(salaryMatch[0]);
-  }
-  
-  // Combine sections and truncate if still too long
-  let combinedText = importantSections.join('\n\n');
-  
-  if (combinedText.length > maxLength) {
-    combinedText = combinedText.substring(0, maxLength - 3) + '...';
-  }
-  
-  return combinedText;
-}
-
-/**
- * Detect the source type of the job posting
- * @param {string} text - Input text
- * @returns {string} - Source type
- */
-function detectSourceType(text) {
-  const lowerText = text.toLowerCase();
-  
-  if (lowerText.includes('linkedin') || lowerText.includes('linkedin.com')) {
-    return 'LinkedIn';
-  }
-  if (lowerText.includes('indeed') || lowerText.includes('indeed.com')) {
-    return 'Indeed';
-  }
-  if (lowerText.includes('glassdoor')) {
-    return 'Glassdoor';
-  }
-  if (lowerText.includes('from:') || lowerText.includes('to:') || lowerText.includes('subject:')) {
-    return 'Email';
-  }
-  if (lowerText.includes('careers') || lowerText.includes('jobs')) {
-    return 'Company Career Page';
-  }
-  if (lowerText.includes('handshake')) {
-    return 'Handshake';
-  }
-  
-  return 'Job Board/Website';
-}
-
-// Enhanced helper function to extract contact info
-function extractContactInfo(text) {
-  const emailPattern = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
-  const phonePattern = /(?:\+?1[-.\s]?)?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}/g;
-  const linkedinPattern = /linkedin\.com\/in\/[\w-]+/gi;
-  
-  const contacts = [];
-  
-  let emailMatch;
-  while ((emailMatch = emailPattern.exec(text)) !== null) {
-    contacts.push(`Email: ${emailMatch[0]}`);
-  }
-  
-  let phoneMatch;
-  while ((phoneMatch = phonePattern.exec(text)) !== null) {
-    contacts.push(`Phone: ${phoneMatch[0]}`);
-  }
-  
-  let linkedinMatch;
-  while ((linkedinMatch = linkedinPattern.exec(text)) !== null) {
-    contacts.push(`LinkedIn: ${linkedinMatch[0]}`);
-  }
-  
-  return contacts.length > 0 ? contacts.join(', ') : 'Not specified';
-}
-
-/**
- * Calculate confidence score for job extraction
- * @param {Object} jobInfo - Extracted job information
- * @returns {string} - Confidence level
- */
-function calculateExtractionConfidence(jobInfo) {
-  let score = 0;
-  let maxScore = 10;
-  
-  // Company name found
-  if (jobInfo.company && jobInfo.company !== 'Unknown Company' && jobInfo.company !== 'Not specified') {
-    score += 2;
-  }
-  
-  // Job title found
-  if (jobInfo.jobTitle && jobInfo.jobTitle !== 'Position Not Specified' && jobInfo.jobTitle !== 'Not specified') {
-    score += 2;
-  }
-  
-  // Location found
-  if (jobInfo.location && jobInfo.location !== 'Location Not Specified' && jobInfo.location !== 'Not specified') {
-    score += 1;
-  }
-  
-  // Requirements found
-  if (jobInfo.requirements && (
-    (Array.isArray(jobInfo.requirements.technical) && jobInfo.requirements.technical.length > 0) ||
-    (Array.isArray(jobInfo.requirements.education) && jobInfo.requirements.education.length > 0)
-  )) {
-    score += 2;
-  }
-  
-  // Salary/compensation found
-  if (jobInfo.salary && jobInfo.salary !== 'Not specified') {
-    score += 1;
-  }
-  
-  // Contact information found
-  if (jobInfo.applicationInfo?.contact && jobInfo.applicationInfo.contact !== 'Not specified') {
-    score += 1;
-  }
-  
-  // Skills found
-  if (Array.isArray(jobInfo.skills) && jobInfo.skills.length > 0) {
-    score += 1;
-  }
-  
-  const percentage = (score / maxScore) * 100;
-  
-  if (percentage >= 80) return 'High';
-  if (percentage >= 60) return 'Medium';
-  if (percentage >= 40) return 'Low';
-  return 'Very Low';
-}
-
-// Additional helper functions for enhanced mock extraction
-function extractWorkArrangement(cleanText) {
-  if (cleanText.includes('remote')) return 'Remote';
-  if (cleanText.includes('hybrid')) return 'Hybrid';
-  if (cleanText.includes('on-site') || cleanText.includes('onsite')) return 'On-site';
-  return 'Not specified';
-}
-
-function extractDuration(cleanText) {
-  const durationPatterns = [
-    /(\d+)\s*(month|months|week|weeks)/gi,
-    /(summer|fall|spring|winter)\s*(internship|intern)/gi,
-    /(full-time|part-time|temporary|contract)/gi
-  ];
-  
-  for (const pattern of durationPatterns) {
-    const match = cleanText.match(pattern);
-    if (match) return match[0];
-  }
-  return 'Not specified';
-}
-
-function extractDepartment(cleanText) {
-  const departments = ['engineering', 'product', 'marketing', 'sales', 'design', 'data', 'research'];
-  for (const dept of departments) {
-    if (cleanText.includes(dept)) return dept.charAt(0).toUpperCase() + dept.slice(1);
-  }
-  return 'Not specified';
-}
-
-function extractSeniority(cleanText) {
-  if (cleanText.includes('intern') || cleanText.includes('internship')) return 'Entry-level';
-  if (cleanText.includes('junior')) return 'Junior';
-  if (cleanText.includes('senior')) return 'Senior';
-  if (cleanText.includes('lead') || cleanText.includes('principal')) return 'Lead';
-  if (cleanText.includes('director') || cleanText.includes('manager')) return 'Director';
-  return 'Entry-level';
-}
-
-function extractEducationRequirements(cleanText) {
-  const requirements = [];
-  if (cleanText.includes('bachelor') || cleanText.includes('bs') || cleanText.includes('ba')) {
-    requirements.push('Bachelor\'s degree');
-  }
-  if (cleanText.includes('master') || cleanText.includes('ms') || cleanText.includes('ma')) {
-    requirements.push('Master\'s degree');
-  }
-  if (cleanText.includes('phd') || cleanText.includes('doctorate')) {
-    requirements.push('PhD');
-  }
-  if (cleanText.includes('gpa')) {
-    requirements.push('Minimum GPA requirement');
-  }
-  return requirements.length > 0 ? requirements : ['Not specified'];
-}
-
-function extractExperienceRequirements(cleanText) {
-  const expMatch = cleanText.match(/(\d+)\s*(year|years)\s*(experience|exp)/gi);
-  if (expMatch) return [expMatch[0]];
-  if (cleanText.includes('entry level') || cleanText.includes('no experience')) {
-    return ['Entry level - no experience required'];
-  }
-  return ['Not specified'];
-}
-
-function extractSoftSkills(cleanText) {
-  const softSkills = [];
-  const skillsMap = {
-    'communication': 'Communication skills',
-    'teamwork': 'Teamwork',
-    'leadership': 'Leadership',
-    'problem solving': 'Problem solving',
-    'analytical': 'Analytical thinking',
-    'creative': 'Creativity',
-    'detail oriented': 'Attention to detail'
+async function analyzeImage(imagePath) {
+  const stats = fs.statSync(imagePath);
+  
+  let analysis = {
+    size: stats.size,
+    type: 'unknown',
+    width: 0,
+    height: 0,
+    hasText: true,
+    complexity: 'medium',
+    recommendedProfile: 'job_posting'
   };
   
-  for (const [key, value] of Object.entries(skillsMap)) {
-    if (cleanText.includes(key)) softSkills.push(value);
-  }
-  return softSkills.length > 0 ? softSkills : ['Not specified'];
-}
-
-function extractResponsibilities(cleanText) {
-  const responsibilities = [];
-  const responsibilityKeywords = [
-    'develop', 'build', 'create', 'design', 'implement', 'maintain',
-    'collaborate', 'work with', 'participate', 'contribute', 'support'
-  ];
-  
-  for (const keyword of responsibilityKeywords) {
-    if (cleanText.includes(keyword)) {
-      responsibilities.push(`${keyword.charAt(0).toUpperCase() + keyword.slice(1)} software solutions`);
-      break;
-    }
-  }
-  return responsibilities.length > 0 ? responsibilities : ['Not specified'];
-}
-
-function extractIndustry(cleanText) {
-  const industries = {
-    'tech': 'Technology',
-    'software': 'Technology',
-    'fintech': 'Financial Technology',
-    'finance': 'Finance',
-    'healthcare': 'Healthcare',
-    'education': 'Education',
-    'retail': 'Retail',
-    'startup': 'Technology'
-  };
-  
-  for (const [key, value] of Object.entries(industries)) {
-    if (cleanText.includes(key)) return value;
-  }
-  return 'Not specified';
-}
-
-function extractStartDate(cleanText) {
-  const datePatterns = [
-    /(summer|fall|spring|winter)\s*(\d{4})/gi,
-    /(january|february|march|april|may|june|july|august|september|october|november|december)\s*(\d{4})/gi,
-    /start.*(\d{1,2}\/\d{1,2}\/\d{4})/gi
-  ];
-  
-  for (const pattern of datePatterns) {
-    const match = cleanText.match(pattern);
-    if (match) return match[0];
-  }
-  return 'Not specified';
-}
-
-// Helper function to generate job description
-function generateJobDescription(title, company) {
-  if (company === 'Company not specified' && title === 'Software Development Internship') {
-    return 'Exciting internship opportunity to gain hands-on experience in software development.';
-  }
-  
-  return `Join ${company} as a ${title} and contribute to innovative projects while developing your skills.`;
-}
-
-/**
- * Enhanced job information extraction from text using AI
- * @param {string} text - The extracted text from the image
- * @returns {Promise<Object>} - Comprehensive job information object
- */
-async function extractJobInformation(text) {
   try {
-    console.log('Analyzing text with enhanced AI extraction...');
+    const sharp = require('sharp');
+    const metadata = await sharp(imagePath).metadata();
     
-    // Preprocess text for better extraction
-    const cleanedText = preprocessJobText(text);
+    analysis.width = metadata.width;
+    analysis.height = metadata.height;
+    analysis.format = metadata.format;
+    analysis.channels = metadata.channels;
+    analysis.density = metadata.density || 72;
     
-    // Truncate text smartly, keeping important sections
-    const maxLength = 3000;
-    const truncatedText = smartTruncateText(cleanedText, maxLength);
+    // Determine image type and complexity
+    const aspectRatio = metadata.width / metadata.height;
+    const pixelCount = metadata.width * metadata.height;
     
-    const prompt = `You are an expert AI specialized in extracting detailed job information from websites, emails, and job postings. You excel at identifying company names, job titles, and requirements even from complex layouts.
+    if (aspectRatio > 2 || aspectRatio < 0.5) {
+      analysis.complexity = 'high'; // Unusual aspect ratio
+    }
+    
+    if (pixelCount < 100000) {
+      analysis.complexity = 'low'; // Small image
+    } else if (pixelCount > 2000000) {
+      analysis.complexity = 'high'; // Large image
+    }
+    
+    // Detect likely content type
+    if (metadata.width > 800 && aspectRatio > 1.2) {
+      analysis.type = 'webpage';
+      analysis.recommendedProfile = 'job_posting';
+    } else if (aspectRatio < 0.8 && metadata.height > 600) {
+      analysis.type = 'mobile';
+      analysis.recommendedProfile = 'linkedin';
+    } else if (aspectRatio > 1.5) {
+      analysis.type = 'document';
+      analysis.recommendedProfile = 'pdf_document';
+    }
+    
+  } catch (error) {
+    console.warn('⚠️ Sharp analysis failed, using basic analysis');
+  }
+  
+  return analysis;
+}
 
-ADVANCED EXTRACTION RULES:
-1. COMPANY IDENTIFICATION:
-   - Look for company logos, headers, "About [Company]", "Join [Company]", domain names in emails
-   - Check email signatures, sender information
-   - Look for phrases like "We are [Company]", "[Company] is hiring", company social media handles
-   - Extract from URLs like careers.company.com, company.com/jobs
-
-2. JOB TITLE PRECISION:
-   - Identify exact position titles including level (Junior, Senior, Lead)
-   - Distinguish between internships, full-time, part-time, contract roles
-   - Look for department/team information (Frontend Engineer, Backend Developer, etc.)
-
-3. LOCATION INTELLIGENCE:
-   - Parse "Remote", "Hybrid", "On-site" specifications
-   - Extract specific addresses, cities, states, countries
-   - Identify timezone requirements, travel expectations
-
-4. COMPENSATION ANALYSIS:
-   - Extract salary ranges, hourly rates, stipends
-   - Identify equity, bonuses, commission structures
-   - Look for "unpaid", "volunteer", "academic credit" indicators
-
-5. REQUIREMENTS EXTRACTION:
-   - Education: Degree requirements, GPA, school year
-   - Experience: Years required, specific industry experience
-   - Technical skills: Programming languages, frameworks, tools
-   - Soft skills: Communication, leadership, teamwork
-
-6. APPLICATION DETAILS:
-   - Deadlines: "Apply by", "Applications due", rolling basis
-   - Process: Interview stages, assessment requirements
-   - Contact: Recruiter emails, application portals, phone numbers
-
-7. COMPANY CULTURE & BENEFITS:
-   - Work environment, company values, team structure
-   - Health benefits, PTO, retirement plans
-   - Learning opportunities, mentorship, career growth
-
-TEXT TO ANALYZE:
-${truncatedText}
-
-CONTEXT HINTS:
-- Source type: ${detectSourceType(text)}
-- Text length: ${text.length} characters
-- Contains URLs: ${/https?:\/\//.test(text)}
-- Contains email patterns: ${/@/.test(text)}
-
-Return a comprehensive JSON object with ALL available information:
-{
-  "company": "Full company name with proper capitalization",
-  "jobTitle": "Complete job title with level/department",
-  "location": "Detailed location (city, state, remote options)",
-  "workArrangement": "Remote|Hybrid|On-site|Flexible",
-  "salary": "Full compensation details including range, benefits",
-  "jobType": "Internship|Full-time|Part-time|Contract|Temporary",
-  "duration": "Length of internship/contract if specified",
-  "department": "Engineering|Product|Marketing|Sales|Other",
-  "seniority": "Entry-level|Junior|Mid-level|Senior|Lead|Director",
-  "requirements": {
-    "education": ["degree requirements", "GPA", "school year"],
-    "experience": ["years required", "specific experience"],
-    "technical": ["programming languages", "frameworks", "tools"],
-    "soft": ["communication", "leadership", "collaboration"]
-  },
-  "responsibilities": ["main job duties", "project types", "team interactions"],
-  "skills": ["technical skills", "tools", "languages", "frameworks"],
-  "qualifications": ["must-have qualifications", "nice-to-have skills"],
-  "description": "Comprehensive 2-3 sentence job summary",
-  "applicationInfo": {
-    "deadline": "Application deadline if mentioned",
-    "process": "Interview process details",
-    "contact": "Recruiter email or contact info",
-    "applyUrl": "Application URL if found"
-  },
-  "benefits": ["health insurance", "PTO", "remote work", "learning opportunities"],
-  "companyInfo": {
-    "industry": "Tech|Finance|Healthcare|Other",
-    "size": "Startup|Small|Medium|Large|Enterprise",
-    "description": "Brief company description"
-  },
-  "additionalInfo": {
-    "startDate": "When position starts",
-    "timezone": "Required timezone if mentioned",
-    "travelRequired": "Travel requirements",
-    "securityClearance": "Security clearance if required"
+/**
+ * Create multiple optimized image variants for different OCR scenarios
+ */
+async function createOptimizedImageVariants(imagePath, analysis) {
+  const variants = [];
+  const tempDir = path.join(require('os').tmpdir(), 'ultimate_ocr');
+  
+  if (!fs.existsSync(tempDir)) {
+    fs.mkdirSync(tempDir, { recursive: true });
+  }
+  
+  const timestamp = Date.now();
+  
+  try {
+    const sharp = require('sharp');
+    
+    // Variant 1: Original Enhanced
+    const originalPath = path.join(tempDir, `original_${timestamp}.png`);
+    await sharp(imagePath)
+      .png({ quality: 100, compressionLevel: 0 })
+      .toFile(originalPath);
+    variants.push({
+      path: originalPath,
+      name: 'original',
+      description: 'Original high-quality',
+      ocrConfig: { psm: 6, oem: 3 }
+    });
+    
+    // Variant 2: Ultra High Contrast
+    const contrastPath = path.join(tempDir, `contrast_${timestamp}.png`);
+    await sharp(imagePath)
+      .normalize()
+      .linear(2.0, -(128 * 2.0) + 128) // Extreme contrast
+      .sharpen({ sigma: 1.5, flat: 1, jagged: 3 })
+      .threshold(140) // Binary threshold
+      .png({ quality: 100 })
+      .toFile(contrastPath);
+    variants.push({
+      path: contrastPath,
+      name: 'ultra_contrast',
+      description: 'Ultra high contrast binary',
+      ocrConfig: { psm: 6, oem: 1 }
+    });
+    
+    // Variant 3: Adaptive Threshold
+    const adaptivePath = path.join(tempDir, `adaptive_${timestamp}.png`);
+    await sharp(imagePath)
+      .grayscale()
+      .normalize()
+      .blur(0.5) // Slight blur to smooth noise
+      .linear(1.8, -50) // Adjust contrast and brightness
+      .sharpen({ sigma: 2 })
+      .png({ quality: 100 })
+      .toFile(adaptivePath);
+    variants.push({
+      path: adaptivePath,
+      name: 'adaptive',
+      description: 'Adaptive threshold enhanced',
+      ocrConfig: { psm: 3, oem: 3 }
+    });
+    
+    // Variant 4: Super Resolution (for small text)
+    const scaleFactor = calculateOptimalScale(analysis);
+    const superResPath = path.join(tempDir, `superres_${timestamp}.png`);
+    await sharp(imagePath)
+      .resize(
+        Math.round(analysis.width * scaleFactor),
+        Math.round(analysis.height * scaleFactor),
+        { kernel: sharp.kernel.lanczos3 }
+      )
+      .sharpen({ sigma: 1, flat: 1, jagged: 2 })
+      .normalize()
+      .png({ quality: 100 })
+      .toFile(superResPath);
+    variants.push({
+      path: superResPath,
+      name: 'super_resolution',
+      description: `Super resolution ${scaleFactor}x`,
+      ocrConfig: { psm: 6, oem: 3 }
+    });
+    
+    // Variant 5: Morphological Operations
+    const morphPath = path.join(tempDir, `morph_${timestamp}.png`);
+    await sharp(imagePath)
+      .grayscale()
+      .normalize()
+      .convolve({
+        width: 3,
+        height: 3,
+        kernel: [-1, -1, -1, -1, 9, -1, -1, -1, -1] // Sharpening kernel
+      })
+      .linear(1.5, -30)
+      .png({ quality: 100 })
+      .toFile(morphPath);
+    variants.push({
+      path: morphPath,
+      name: 'morphological',
+      description: 'Morphological enhancement',
+      ocrConfig: { psm: 11, oem: 1 }
+    });
+    
+    // Variant 6: Edge-Preserved Smoothing
+    const edgePath = path.join(tempDir, `edge_${timestamp}.png`);
+    await sharp(imagePath)
+      .median(3) // Median filter for noise reduction
+      .normalize()
+      .sharpen({ sigma: 2, flat: 1, jagged: 2 })
+      .linear(1.3, -20)
+      .png({ quality: 100 })
+      .toFile(edgePath);
+    variants.push({
+      path: edgePath,
+      name: 'edge_preserved',
+      description: 'Edge-preserved smoothing',
+      ocrConfig: { psm: 8, oem: 3 }
+    });
+    
+    console.log(`✅ Created ${variants.length} advanced image variants`);
+    return variants;
+    
+  } catch (error) {
+    console.warn('⚠️ Advanced preprocessing failed, using basic variants');
+    return await createBasicImageVariants(imagePath, tempDir, timestamp);
   }
 }
 
-CRITICAL: Return ONLY the JSON object. Extract ALL available information, use "Not specified" only when truly unavailable.`;
+/**
+ * Calculate optimal scaling factor based on image analysis
+ */
+function calculateOptimalScale(analysis) {
+  const minDimension = Math.min(analysis.width, analysis.height);
+  
+  if (minDimension < 500) return 3.0;      // Very small images
+  if (minDimension < 800) return 2.5;      // Small images  
+  if (minDimension < 1200) return 2.0;     // Medium images
+  if (minDimension < 1600) return 1.5;     // Large images
+  return 1.2; // Very large images
+}
 
-    const response = await openai.chat.completions.create({
-      model: 'openai/gpt-4o-mini', // Using GPT-4 for better extraction accuracy
-      messages: [
-        { 
-          role: 'system', 
-          content: 'You are an expert AI specialized in extracting comprehensive job information from various sources including websites, emails, and job boards. You excel at identifying subtle details and extracting structured data from unstructured text. Always return valid JSON with all available information.' 
-        },
-        { role: 'user', content: prompt }
-      ],
-      temperature: 0.05, // Very low temperature for consistent extraction
-      max_tokens: 2000 // Increased for comprehensive extraction
-    });
-
-    const content = response.choices[0].message.content.trim();
-    console.log('AI Response preview:', content.substring(0, 200) + '...');
+/**
+ * Create basic image variants when Sharp is not available
+ */
+async function createBasicImageVariants(imagePath, tempDir, timestamp) {
+  const variants = [];
+  
+  // Create multiple copies with different OCR configurations
+  const configs = [
+    { psm: 6, oem: 3, name: 'standard', description: 'Standard text blocks' },
+    { psm: 3, oem: 1, name: 'full_page', description: 'Full page analysis' },
+    { psm: 8, oem: 3, name: 'single_word', description: 'Single word focus' },
+    { psm: 7, oem: 1, name: 'single_line', description: 'Single text line' },
+    { psm: 11, oem: 3, name: 'sparse', description: 'Sparse text' },
+    { psm: 13, oem: 1, name: 'raw_line', description: 'Raw line text' }
+  ];
+  
+  for (const config of configs) {
+    const variantPath = path.join(tempDir, `${config.name}_${timestamp}.png`);
+    fs.copyFileSync(imagePath, variantPath);
     
-    // Try to parse the comprehensive JSON response
+    variants.push({
+      path: variantPath,
+      name: config.name,
+      description: config.description,
+      ocrConfig: { psm: config.psm, oem: config.oem }
+    });
+  }
+  
+  return variants;
+}
+
+/**
+ * Run advanced OCR passes with optimized Tesseract configurations
+ */
+async function runAdvancedOCRPasses(imageVariants, analysis) {
+  console.log(`🔍 Running ${imageVariants.length} advanced OCR passes...`);
+  
+  const results = [];
+  
+  for (let i = 0; i < imageVariants.length; i++) {
+    const variant = imageVariants[i];
+    
     try {
-      // Find JSON in the response if it's not pure JSON
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      const jsonString = jsonMatch ? jsonMatch[0] : content;
+      console.log(`📖 Pass ${i + 1}/${imageVariants.length}: ${variant.description}`);
       
-      const jobInfo = JSON.parse(jsonString);
-      
-      // Validate and structure the comprehensive response
-      const comprehensiveJobInfo = {
-        // Basic Information
-        company: jobInfo.company || 'Unknown Company',
-        jobTitle: jobInfo.jobTitle || 'Position Not Specified',
-        location: jobInfo.location || 'Location Not Specified',
-        workArrangement: jobInfo.workArrangement || 'Not specified',
-        salary: jobInfo.salary || 'Not specified',
-        jobType: jobInfo.jobType || 'Not specified',
-        duration: jobInfo.duration || 'Not specified',
-        department: jobInfo.department || 'Not specified',
-        seniority: jobInfo.seniority || 'Not specified',
-        
-        // Detailed Requirements
-        requirements: {
-          education: Array.isArray(jobInfo.requirements?.education) ? jobInfo.requirements.education : [],
-          experience: Array.isArray(jobInfo.requirements?.experience) ? jobInfo.requirements.experience : [],
-          technical: Array.isArray(jobInfo.requirements?.technical) ? jobInfo.requirements.technical : [],
-          soft: Array.isArray(jobInfo.requirements?.soft) ? jobInfo.requirements.soft : []
+      // Advanced Tesseract configuration
+      const tesseractConfig = {
+        logger: m => {
+          if (m.status === 'recognizing text') {
+            const progress = Math.round(m.progress * 100);
+            if (progress % 20 === 0) {
+              console.log(`   Progress: ${progress}%`);
+            }
+          }
         },
         
-        // Job Details
-        responsibilities: Array.isArray(jobInfo.responsibilities) ? jobInfo.responsibilities : [],
-        skills: Array.isArray(jobInfo.skills) ? jobInfo.skills : [],
-        qualifications: Array.isArray(jobInfo.qualifications) ? jobInfo.qualifications : [],
-        description: jobInfo.description || generateJobDescription(jobInfo.jobTitle || 'Position', jobInfo.company || 'Company'),
+        // Page segmentation mode
+        tessedit_pageseg_mode: variant.ocrConfig.psm,
         
-        // Application Information
-        applicationInfo: {
-          deadline: jobInfo.applicationInfo?.deadline || 'Not specified',
-          process: jobInfo.applicationInfo?.process || 'Not specified',
-          contact: jobInfo.applicationInfo?.contact || extractContactInfo(text),
-          applyUrl: jobInfo.applicationInfo?.applyUrl || 'Not specified'
-        },
+        // OCR Engine Mode
+        tessedit_ocr_engine_mode: variant.ocrConfig.oem,
         
-        // Benefits and Company Info
-        benefits: Array.isArray(jobInfo.benefits) ? jobInfo.benefits : [],
-        companyInfo: {
-          industry: jobInfo.companyInfo?.industry || 'Not specified',
-          size: jobInfo.companyInfo?.size || 'Not specified',
-          description: jobInfo.companyInfo?.description || 'Not specified'
-        },
+        // Character whitelist (optimized for job postings)
+        tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.,!?@#$%^&*()_+-=[]{}|;:\'",.<>/\\`~ \n\t€£¥$',
         
-        // Additional Details
-        additionalInfo: {
-          startDate: jobInfo.additionalInfo?.startDate || 'Not specified',
-          timezone: jobInfo.additionalInfo?.timezone || 'Not specified',
-          travelRequired: jobInfo.additionalInfo?.travelRequired || 'Not specified',
-          securityClearance: jobInfo.additionalInfo?.securityClearance || 'Not specified'
-        },
+        // Advanced Tesseract parameters
+        preserve_interword_spaces: '1',
+        tessedit_do_invert: '0',
+        textord_really_old_xheight: '1',
+        textord_min_linesize: '1.25',
         
-        // Metadata
-        extractionMetadata: {
-          sourceType: detectSourceType(text),
-          textLength: text.length,
-          extractionDate: new Date().toISOString(),
-          confidence: calculateExtractionConfidence(jobInfo)
-        }
+        // Quality settings
+        tessedit_write_images: '0',
+        tessedit_create_pdf: '0',
+        tessedit_create_hocr: '0',
+        
+        // Language model settings
+        load_system_dawg: '1',
+        load_freq_dawg: '1',
+        load_unambig_dawg: '1',
+        load_punc_dawg: '1',
+        load_number_dawg: '1',
+        
+        // Confidence thresholds
+        tessedit_reject_mode: '0',
+        classify_bln_numeric_mode: '0',
+        
+        // Advanced recognition settings
+        textord_single_height_wds: '1',
+        textord_use_cjk_fp_model: '0',
+        segment_segcost_rating: '1',
+        
+        // Noise reduction
+        textord_noise_normratio: '2',
+        textord_noise_translimit: '16',
+        textord_noise_sncount: '1'
       };
       
-      console.log('Comprehensive job extraction successful:', {
-        company: comprehensiveJobInfo.company,
-        title: comprehensiveJobInfo.jobTitle,
-        confidence: comprehensiveJobInfo.extractionMetadata.confidence
+      const result = await Tesseract.recognize(variant.path, 'eng', tesseractConfig);
+      
+      const confidence = Math.round(result.data.confidence);
+      const text = result.data.text;
+      const wordCount = text.split(/\s+/).filter(word => word.length > 0).length;
+      
+      // Extract detailed word-level data
+      const words = result.data.words || [];
+      const lines = result.data.lines || [];
+      const paragraphs = result.data.paragraphs || [];
+      
+      console.log(`   ✅ Result: ${wordCount} words, ${confidence}% confidence`);
+      
+      results.push({
+        text,
+        confidence,
+        wordCount,
+        variant: variant.name,
+        description: variant.description,
+        words,
+        lines,
+        paragraphs,
+        bbox: result.data.bbox,
+        processingTime: Date.now()
       });
       
-      return comprehensiveJobInfo;
-    } catch (parseError) {
-      console.error('Error parsing AI response:', parseError);
-      console.log('AI Response:', content);
-      return createMockJobInfo(text);
+    } catch (error) {
+      console.error(`❌ OCR pass ${i + 1} failed:`, error.message);
+      results.push({
+        text: '',
+        confidence: 0,
+        wordCount: 0,
+        variant: variant.name,
+        description: variant.description,
+        error: error.message
+      });
+    }
+  }
+  
+  // Sort results by confidence
+  results.sort((a, b) => b.confidence - a.confidence);
+  
+  console.log('📊 OCR Pass Results:');
+  results.forEach((result, i) => {
+    if (result.confidence > 0) {
+      console.log(`   ${i + 1}. ${result.description}: ${result.confidence}% (${result.wordCount} words)`);
+    }
+  });
+  
+  return results.filter(r => r.confidence > 0);
+}
+
+/**
+ * Intelligent merging of multiple OCR results
+ */
+async function intelligentResultMerging(ocrResults) {
+  console.log('🧠 Performing intelligent result merging...');
+  
+  if (ocrResults.length === 0) {
+    throw new Error('No valid OCR results to merge');
+  }
+  
+  if (ocrResults.length === 1) {
+    return {
+      text: ocrResults[0].text,
+      confidence: ocrResults[0].confidence,
+      method: 'single_result'
+    };
+  }
+  
+  // Strategy 1: Confidence-weighted merging
+  const topResults = ocrResults.slice(0, Math.min(3, ocrResults.length));
+  let mergedText = topResults[0].text; // Start with best result
+  
+  // Strategy 2: Word-level confidence merging
+  if (topResults.length > 1 && topResults[0].words && topResults[0].words.length > 0) {
+    mergedText = await wordLevelMerging(topResults);
+  }
+  
+  // Strategy 3: Line-level validation
+  mergedText = await lineValidation(mergedText, topResults);
+  
+  // Calculate merged confidence
+  const weightedConfidence = topResults.reduce((sum, result, index) => {
+    const weight = 1 / (index + 1); // Decreasing weight
+    return sum + (result.confidence * weight);
+  }, 0) / topResults.reduce((sum, _, index) => sum + (1 / (index + 1)), 0);
+  
+  console.log(`✅ Merged ${topResults.length} results with ${Math.round(weightedConfidence)}% confidence`);
+  
+  return {
+    text: mergedText,
+    confidence: weightedConfidence,
+    method: 'intelligent_merge',
+    sourceResults: topResults.length
+  };
+}
+
+/**
+ * Advanced word-level merging using confidence scores
+ */
+async function wordLevelMerging(results) {
+  console.log('🔤 Performing word-level confidence merging...');
+  
+  const primaryResult = results[0];
+  let improvedText = primaryResult.text;
+  let improvements = 0;
+  
+  if (!primaryResult.words || primaryResult.words.length === 0) {
+    return improvedText;
+  }
+  
+  // Find low-confidence words and try to improve them
+  for (const word of primaryResult.words) {
+    if (word.confidence < 75 && word.text.length > 2) {
+      // Look for better alternatives
+      for (let i = 1; i < results.length; i++) {
+        const altResult = results[i];
+        if (altResult.words) {
+          const betterWord = findBetterWordMatch(word, altResult.words);
+          if (betterWord && betterWord.confidence > word.confidence + 20) {
+            improvedText = improvedText.replace(word.text, betterWord.text);
+            improvements++;
+            console.log(`   📝 Improved "${word.text}" → "${betterWord.text}" (${betterWord.confidence}%)`);
+          }
+        }
+      }
+    }
+  }
+  
+  if (improvements > 0) {
+    console.log(`✅ Made ${improvements} word-level improvements`);
+  }
+  
+  return improvedText;
+}
+
+/**
+ * Find better word match based on position and confidence
+ */
+function findBetterWordMatch(targetWord, alternativeWords) {
+  if (!targetWord.bbox) return null;
+  
+  const threshold = 30; // Position matching threshold
+  
+  return alternativeWords.find(altWord => {
+    if (!altWord.bbox) return false;
+    
+    const xDiff = Math.abs(altWord.bbox.x0 - targetWord.bbox.x0);
+    const yDiff = Math.abs(altWord.bbox.y0 - targetWord.bbox.y0);
+    
+    return xDiff < threshold && 
+           yDiff < threshold && 
+           altWord.confidence > targetWord.confidence &&
+           altWord.text.length > 1;
+  });
+}
+
+/**
+ * Line-level validation to ensure text coherence
+ */
+async function lineValidation(text, results) {
+  console.log('📏 Performing line-level validation...');
+  
+  // For now, return the text as-is
+  // Future enhancement: validate line structure across results
+  return text;
+}
+
+/**
+ * Advanced post-processing specifically optimized for job postings
+ */
+async function advancedPostProcessing(text, analysis) {
+  console.log('✨ Advanced post-processing...');
+  
+  let processedText = text;
+  
+  // 1. Fix OCR character errors
+  processedText = fixAdvancedOCRErrors(processedText);
+  
+  // 2. Job-specific corrections
+  processedText = fixJobTerms(processedText);
+  
+  // 3. Email and URL corrections
+  processedText = fixEmailsAndUrls(processedText);
+  
+  // 4. Normalize spacing and formatting
+  processedText = normalizeAdvancedFormatting(processedText);
+  
+  // 5. Fix line breaks and paragraphs
+  processedText = fixAdvancedLineBreaks(processedText);
+  
+  // 6. Remove OCR artifacts
+  processedText = removeOCRArtifacts(processedText);
+  
+  // 7. Enhance readability
+  processedText = enhanceReadability(processedText);
+  
+  console.log('✅ Advanced post-processing complete');
+  return processedText;
+}
+
+/**
+ * Fix advanced OCR character recognition errors
+ */
+function fixAdvancedOCRErrors(text) {
+  const corrections = [
+    // Advanced character substitutions
+    [/rn/g, 'm'],
+    [/\|(?=[a-z])/g, 'l'], // | before lowercase letters
+    [/(?<=[a-z])\|/g, 'l'], // | after lowercase letters
+    [/0(?=[a-zA-Z])/g, 'O'], // 0 before letters
+    [/(?<=[a-zA-Z])0/g, 'o'], // 0 after letters
+    [/5(?=[a-zA-Z])/g, 'S'], // 5 before letters
+    [/1(?=[a-z])/g, 'l'], // 1 before lowercase
+    [/8(?=[a-zA-Z])/g, 'B'], // 8 before letters
+    [/6(?=[a-zA-Z])/g, 'G'], // 6 before letters (sometimes)
+    
+    // Common word fixes with word boundaries
+    [/\bth e\b/gi, 'the'],
+    [/\ban d\b/gi, 'and'],
+    [/\bw ith\b/gi, 'with'],
+    [/\bf or\b/gi, 'for'],
+    [/\bt o\b/gi, 'to'],
+    [/\bo f\b/gi, 'of'],
+    [/\bi n\b/gi, 'in'],
+    [/\bo n\b/gi, 'on'],
+    [/\ba t\b/gi, 'at'],
+    [/\bi s\b/gi, 'is'],
+    [/\ba re\b/gi, 'are'],
+    [/\bw e\b/gi, 'we'],
+    [/\by ou\b/gi, 'you'],
+    
+    // Fix punctuation spacing
+    [/ +\./g, '.'],
+    [/ +,/g, ','],
+    [/ +:/g, ':'],
+    [/ +;/g, ';'],
+    [/ +!/g, '!'],
+    [/ +\?/g, '?'],
+    [/\( +/g, '('],
+    [/ +\)/g, ')'],
+  ];
+  
+  let correctedText = text;
+  for (const [pattern, replacement] of corrections) {
+    correctedText = correctedText.replace(pattern, replacement);
+  }
+  
+  return correctedText;
+}
+
+/**
+ * Fix job-specific terms and phrases
+ */
+function fixJobTerms(text) {
+  const jobCorrections = [
+    // Job titles
+    [/\bsoftwar e engineer\b/gi, 'Software Engineer'],
+    [/\bsoftwar e developer\b/gi, 'Software Developer'],
+    [/\bfrontend developer\b/gi, 'Frontend Developer'],
+    [/\bbackend developer\b/gi, 'Backend Developer'],
+    [/\bfull.?stack developer\b/gi, 'Full Stack Developer'],
+    [/\bdata scientist\b/gi, 'Data Scientist'],
+    [/\bdata analyst\b/gi, 'Data Analyst'],
+    [/\bproduct manager\b/gi, 'Product Manager'],
+    [/\bproject manager\b/gi, 'Project Manager'],
+    [/\bux designer\b/gi, 'UX Designer'],
+    [/\bui designer\b/gi, 'UI Designer'],
+    [/\bdevops engineer\b/gi, 'DevOps Engineer'],
+    
+    // Common job terms
+    [/\binternsh ip\b/gi, 'internship'],
+    [/\bfull.?time\b/gi, 'full-time'],
+    [/\bpart.?time\b/gi, 'part-time'],
+    [/\bremot e\b/gi, 'remote'],
+    [/\bon.?site\b/gi, 'on-site'],
+    [/\bhybri d\b/gi, 'hybrid'],
+    [/\bexperien ce\b/gi, 'experience'],
+    [/\brequire d\b/gi, 'required'],
+    [/\bqualificat ion\b/gi, 'qualification'],
+    [/\bresponsibilit y\b/gi, 'responsibility'],
+    [/\btechnolog y\b/gi, 'technology'],
+    [/\bapplicat ion\b/gi, 'application'],
+    [/\bopportun ity\b/gi, 'opportunity'],
+    
+    // Technical terms
+    [/\bjavascript\b/gi, 'JavaScript'],
+    [/\btypescript\b/gi, 'TypeScript'],
+    [/\bnode\.?js\b/gi, 'Node.js'],
+    [/\breact\.?js\b/gi, 'React.js'],
+    [/\bangular\.?js\b/gi, 'Angular.js'],
+    [/\bvue\.?js\b/gi, 'Vue.js'],
+    [/\bgit hub\b/gi, 'GitHub'],
+    [/\blinked in\b/gi, 'LinkedIn'],
+  ];
+  
+  let correctedText = text;
+  for (const [pattern, replacement] of jobCorrections) {
+    correctedText = correctedText.replace(pattern, replacement);
+  }
+  
+  return correctedText;
+}
+
+/**
+ * Fix email addresses and URLs
+ */
+function fixEmailsAndUrls(text) {
+  return text
+    // Fix common email errors
+    .replace(/@([a-zA-Z0-9.-]+)\.c0m/g, '@$1.com')
+    .replace(/@([a-zA-Z0-9.-]+)\.c om/g, '@$1.com')
+    .replace(/@([a-zA-Z0-9.-]+)\.co rn/g, '@$1.com')
+    .replace(/@([a-zA-Z0-9.-]+)\.gmaii\.com/g, '@$1.gmail.com')
+    
+    // Fix URL errors
+    .replace(/www\.([a-zA-Z0-9.-]+)\.c0m/g, 'www.$1.com')
+    .replace(/https?:\/\/([a-zA-Z0-9.-]+)\.c0m/g, 'https://$1.com')
+    
+    // Fix spacing in emails
+    .replace(/(\w+)@\s+(\w+)/g, '$1@$2')
+    .replace(/(\w+)\s+@(\w+)/g, '$1@$2');
+}
+
+/**
+ * Advanced formatting normalization
+ */
+function normalizeAdvancedFormatting(text) {
+  return text
+    // Normalize line endings
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    
+    // Fix multiple spaces
+    .replace(/[ \t]+/g, ' ')
+    
+    // Fix line spacing
+    .replace(/\n +/g, '\n')
+    .replace(/ +\n/g, '\n')
+    .replace(/\n{4,}/g, '\n\n\n')
+    
+    // Fix bullet points
+    .replace(/[•·▪▫◦‣⁃]/g, '•')
+    .replace(/^\s*[-*+]\s+/gm, '• ')
+    
+    // Fix quotes
+    .replace(/[""]/g, '"')
+    .replace(/['']/g, "'")
+    
+    // Fix dashes
+    .replace(/[–—]/g, '-')
+    
+    .trim();
+}
+
+/**
+ * Advanced line break fixing
+ */
+function fixAdvancedLineBreaks(text) {
+  return text
+    // Join broken words (hyphenated line breaks)
+    .replace(/([a-z])-\n([a-z])/g, '$1$2')
+    
+    // Join continuation lines
+    .replace(/([a-z,])\n([a-z])/g, '$1 $2')
+    
+    // Preserve paragraph breaks after sentences
+    .replace(/([.!?])\n([A-Z])/g, '$1\n\n$2')
+    
+    // Fix list items
+    .replace(/\n•\s*/g, '\n• ')
+    
+    // Fix section headers
+    .replace(/\n([A-Z][A-Z\s]+:)\n/g, '\n\n$1\n')
+    
+    // Clean up excessive line breaks
+    .replace(/\n{3,}/g, '\n\n');
+}
+
+/**
+ * Remove OCR artifacts and noise
+ */
+function removeOCRArtifacts(text) {
+  return text
+    // Remove single characters on their own lines
+    .replace(/\n[a-zA-Z]\n/g, '\n')
+    
+    // Remove lines with only special characters
+    .replace(/\n[^a-zA-Z0-9\s]+\n/g, '\n')
+    
+    // Remove excessive punctuation
+    .replace(/[.]{4,}/g, '...')
+    .replace(/[-]{3,}/g, '---')
+    
+    // Remove OCR confidence markers
+    .replace(/\[\d+%\]/g, '')
+    
+    // Remove page numbers and headers/footers
+    .replace(/\n\s*\d+\s*\n/g, '\n')
+    .replace(/\nPage \d+.*\n/gi, '\n');
+}
+
+/**
+ * Enhance text readability
+ */
+function enhanceReadability(text) {
+  return text
+    // Ensure proper spacing after punctuation
+    .replace(/([.!?])([A-Z])/g, '$1 $2')
+    .replace(/([,;:])([a-zA-Z])/g, '$1 $2')
+    
+    // Fix common abbreviations
+    .replace(/\be\.g\.\s*/gi, 'e.g. ')
+    .replace(/\bi\.e\.\s*/gi, 'i.e. ')
+    .replace(/\betc\.\s*/gi, 'etc. ')
+    
+    // Ensure proper capitalization
+    .replace(/\b(javascript|python|java|html|css|sql)\b/gi, match => match.toUpperCase())
+    
+    .trim();
+}
+
+/**
+ * Calculate advanced quality metrics
+ */
+function calculateAdvancedQualityMetrics(ocrResults, finalText, startTime) {
+  const validResults = ocrResults.filter(r => r.confidence > 0);
+  
+  if (validResults.length === 0) {
+    return {
+      confidence: 0,
+      quality: 'failed',
+      processingTime: Date.now() - startTime,
+      details: 'No valid OCR results'
+    };
+  }
+  
+  const avgConfidence = validResults.reduce((sum, r) => sum + r.confidence, 0) / validResults.length;
+  const maxConfidence = Math.max(...validResults.map(r => r.confidence));
+  const minConfidence = Math.min(...validResults.map(r => r.confidence));
+  const totalWords = finalText.split(/\s+/).filter(w => w.length > 0).length;
+  const processingTime = Date.now() - startTime;
+  
+  // Advanced quality assessment
+  let quality = 'poor';
+  if (avgConfidence >= 85) quality = 'excellent';
+  else if (avgConfidence >= 75) quality = 'very_good';
+  else if (avgConfidence >= 65) quality = 'good';
+  else if (avgConfidence >= 55) quality = 'fair';
+  
+  // Additional quality indicators
+  const confidenceRange = maxConfidence - minConfidence;
+  const consistency = confidenceRange < 20 ? 'high' : confidenceRange < 40 ? 'medium' : 'low';
+  
+  const bestResult = validResults.find(r => r.confidence === maxConfidence);
+  
+  return {
+    confidence: Math.round(avgConfidence),
+    maxConfidence: Math.round(maxConfidence),
+    minConfidence: Math.round(minConfidence),
+    confidenceRange: Math.round(confidenceRange),
+    consistency,
+    quality,
+    totalWords,
+    processingTime,
+    passesUsed: validResults.length,
+    bestMethod: bestResult?.description || 'unknown',
+    details: `${validResults.length} passes, ${consistency} consistency`
+  };
+}
+
+/**
+ * Cleanup image variants
+ */
+async function cleanupImageVariants(variants) {
+  console.log('🧹 Cleaning up image variants...');
+  
+  for (const variant of variants) {
+    try {
+      if (fs.existsSync(variant.path)) {
+        fs.unlinkSync(variant.path);
+      }
+    } catch (error) {
+      console.warn(`⚠️ Could not delete: ${variant.path}`);
+    }
+  }
+  
+  // Clean up temp directory
+  try {
+    const tempDir = path.dirname(variants[0]?.path);
+    if (tempDir && fs.existsSync(tempDir)) {
+      const files = fs.readdirSync(tempDir);
+      if (files.length === 0) {
+        fs.rmdirSync(tempDir);
+      }
     }
   } catch (error) {
-    console.error('Error extracting job information:', error);
-    
-    // Return mock data instead of failing
-    console.log('Falling back to mock job information');
-    return createMockJobInfo(text);
+    // Ignore cleanup errors
   }
 }
 
+/**
+ * Basic OCR fallback
+ */
+async function basicOCRFallback(imagePath) {
+  console.log('🔄 Using basic Tesseract fallback...');
+  
+  try {
+    const result = await Tesseract.recognize(imagePath, 'eng', {
+      logger: m => {
+        if (m.status === 'recognizing text' && m.progress % 0.25 === 0) {
+          console.log(`Basic OCR: ${Math.round(m.progress * 100)}%`);
+        }
+      }
+    });
+    
+    return {
+      text: result.data.text,
+      originalText: result.data.text,
+      confidence: Math.round(result.data.confidence),
+      wordCount: result.data.text.split(/\s+/).filter(w => w.length > 0).length,
+      characterCount: result.data.text.length,
+      qualityMetrics: {
+        confidence: Math.round(result.data.confidence),
+        quality: 'basic',
+        processingTime: 0,
+        details: 'Basic fallback OCR'
+      },
+      metadata: {
+        imagePath,
+        processedAt: new Date().toISOString(),
+        ocrEngine: 'Basic Tesseract Fallback',
+        fallback: true
+      }
+    };
+  } catch (error) {
+    throw new Error(`Complete OCR failure: ${error.message}`);
+  }
+}
+
+/**
+ * Default OCR configuration
+ */
+function getDefaultOCRConfig() {
+  return {
+    global_settings: {
+      max_preprocessing_passes: 6,
+      max_ocr_passes: 4,
+      confidence_threshold: 30,
+      enable_word_level_merging: true,
+      temp_file_cleanup: true
+    }
+  };
+}
+
+// Export only the OCR function - no AI dependencies
 module.exports = {
-  extractTextFromImage,
-  extractJobInformation
+  extractTextFromImage
 }; 

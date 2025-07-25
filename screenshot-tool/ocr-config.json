@@ -1,0 +1,198 @@
+{
+  "profiles": {
+    "job_posting": {
+      "description": "Optimized for job posting websites",
+      "preprocessing": [
+        {
+          "name": "high_contrast",
+          "enabled": true,
+          "settings": {
+            "contrast_multiplier": 1.5,
+            "brightness_offset": -20,
+            "sharpen": { "sigma": 1, "flat": 1, "jagged": 2 }
+          }
+        },
+        {
+          "name": "upscale_small_text",
+          "enabled": true,
+          "settings": {
+            "min_scale_factor": 1.5,
+            "max_scale_factor": 3.0,
+            "target_min_dimension": 1000
+          }
+        },
+        {
+          "name": "noise_reduction",
+          "enabled": true,
+          "settings": {
+            "blur_radius": 0.3,
+            "normalize": true
+          }
+        }
+      ],
+      "ocr_passes": [
+        { "psm": 6, "oem": 3, "priority": "high", "description": "Standard text blocks" },
+        { "psm": 3, "oem": 1, "priority": "medium", "description": "Full page analysis" },
+        { "psm": 11, "oem": 3, "priority": "low", "description": "Sparse text detection" }
+      ],
+      "post_processing": {
+        "fix_common_errors": true,
+        "correct_job_terms": true,
+        "normalize_whitespace": true,
+        "fix_line_breaks": true
+      }
+    },
+    "email": {
+      "description": "Optimized for email screenshots",
+      "preprocessing": [
+        {
+          "name": "grayscale_enhance",
+          "enabled": true,
+          "settings": {
+            "normalize": true,
+            "sharpen": true
+          }
+        },
+        {
+          "name": "threshold_clean",
+          "enabled": true,
+          "settings": {
+            "threshold": 128,
+            "adaptive": false
+          }
+        }
+      ],
+      "ocr_passes": [
+        { "psm": 6, "oem": 3, "priority": "high", "description": "Email text blocks" },
+        { "psm": 4, "oem": 1, "priority": "medium", "description": "Single column text" },
+        { "psm": 8, "oem": 3, "priority": "low", "description": "Single word focus" }
+      ],
+      "post_processing": {
+        "fix_common_errors": true,
+        "correct_email_format": true,
+        "preserve_line_structure": true
+      }
+    },
+    "linkedin": {
+      "description": "Optimized for LinkedIn job posts",
+      "preprocessing": [
+        {
+          "name": "social_media_enhance",
+          "enabled": true,
+          "settings": {
+            "contrast_boost": 1.3,
+            "saturation_reduce": 0.8,
+            "blue_filter": true
+          }
+        },
+        {
+          "name": "text_isolation",
+          "enabled": true,
+          "settings": {
+            "background_blur": 1.0,
+            "text_sharpen": 2.0
+          }
+        }
+      ],
+      "ocr_passes": [
+        { "psm": 3, "oem": 3, "priority": "high", "description": "LinkedIn layout analysis" },
+        { "psm": 6, "oem": 1, "priority": "medium", "description": "Text block focus" },
+        { "psm": 11, "oem": 3, "priority": "low", "description": "Scattered text" }
+      ]
+    },
+    "indeed": {
+      "description": "Optimized for Indeed job listings",
+      "preprocessing": [
+        {
+          "name": "job_board_enhance",
+          "enabled": true,
+          "settings": {
+            "white_background_boost": true,
+            "text_contrast": 1.4,
+            "remove_artifacts": true
+          }
+        }
+      ],
+      "ocr_passes": [
+        { "psm": 6, "oem": 3, "priority": "high", "description": "Job listing blocks" },
+        { "psm": 3, "oem": 1, "priority": "medium", "description": "Full page scan" }
+      ]
+    },
+    "pdf_document": {
+      "description": "Optimized for PDF screenshots",
+      "preprocessing": [
+        {
+          "name": "document_enhance",
+          "enabled": true,
+          "settings": {
+            "dpi_boost": 300,
+            "text_clarity": "high",
+            "remove_compression_artifacts": true
+          }
+        }
+      ],
+      "ocr_passes": [
+        { "psm": 1, "oem": 3, "priority": "high", "description": "Document layout analysis" },
+        { "psm": 3, "oem": 1, "priority": "medium", "description": "Page structure" },
+        { "psm": 6, "oem": 3, "priority": "low", "description": "Text blocks" }
+      ]
+    },
+    "handwritten": {
+      "description": "Optimized for handwritten text",
+      "preprocessing": [
+        {
+          "name": "handwriting_enhance",
+          "enabled": true,
+          "settings": {
+            "edge_enhance": true,
+            "stroke_thicken": 1.2,
+            "background_clean": true
+          }
+        }
+      ],
+      "ocr_passes": [
+        { "psm": 8, "oem": 1, "priority": "high", "description": "Single word handwriting" },
+        { "psm": 7, "oem": 1, "priority": "medium", "description": "Text line handwriting" },
+        { "psm": 13, "oem": 1, "priority": "low", "description": "Raw line text" }
+      ],
+      "post_processing": {
+        "handwriting_corrections": true,
+        "context_guessing": true
+      }
+    }
+  },
+  "global_settings": {
+    "max_preprocessing_passes": 6,
+    "max_ocr_passes": 4,
+    "confidence_threshold": 30,
+    "word_confidence_threshold": 50,
+    "enable_word_level_merging": true,
+    "enable_spell_correction": true,
+    "parallel_processing": false,
+    "temp_file_cleanup": true,
+    "debug_mode": false,
+    "save_preprocessed_images": false
+  },
+  "language_settings": {
+    "primary": "eng",
+    "fallback": ["eng"],
+    "custom_dictionary": [
+      "internship", "fulltime", "parttime", "remote", "onsite", "hybrid",
+      "frontend", "backend", "fullstack", "devops", "ui", "ux",
+      "javascript", "python", "react", "nodejs", "typescript",
+      "linkedin", "indeed", "glassdoor", "stackoverflow", "github"
+    ]
+  },
+  "quality_metrics": {
+    "minimum_confidence": 40,
+    "target_confidence": 80,
+    "word_count_threshold": 10,
+    "character_count_threshold": 50,
+    "quality_grades": {
+      "excellent": 85,
+      "good": 70,
+      "fair": 55,
+      "poor": 0
+    }
+  }
+} 

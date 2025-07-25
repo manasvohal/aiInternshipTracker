@@ -153,4 +153,4 @@ api-keys.json
 
 # Temporary files
 *.tmp
-*.temp 
+*.temp screenshot-tool/gmail-credentials.json

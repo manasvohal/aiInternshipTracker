@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <meta charset="UTF-8">
   <title>Screenshot Tool</title>
@@ -7,8 +8,9 @@
     * {
       box-sizing: border-box;
     }
-    
-    html, body {
+
+    html,
+    body {
       margin: 0;
       padding: 0;
       width: 100%;
@@ -18,7 +20,7 @@
       user-select: none;
       font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     }
-    
+
     .toolbar-container {
       position: absolute;
       top: 0;
@@ -28,9 +30,10 @@
       display: flex;
       flex-direction: column;
       overflow: visible;
-      padding: 6px; /* Reduced from 8px */
+      padding: 6px;
+      /* Reduced from 8px */
     }
-    
+
     .floating-toolbar {
       position: relative;
       display: flex;
@@ -40,8 +43,9 @@
       -webkit-backdrop-filter: blur(20px);
       border: 1px solid rgba(255, 255, 255, 0.2);
       border-radius: 50px;
-      padding: 6px 12px; /* Reduced padding */
-      box-shadow: 
+      padding: 6px 12px;
+      /* Reduced padding */
+      box-shadow:
         0 4px 20px rgba(0, 0, 0, 0.3),
         inset 0 1px 0 rgba(255, 255, 255, 0.15);
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -49,76 +53,100 @@
       user-select: none;
       opacity: 0.98;
       z-index: 1000;
-      min-height: 45px; /* Reduced height */
+      min-height: 45px;
+      /* Reduced height */
     }
-    
+
     .floating-toolbar:hover {
       background: rgba(0, 0, 0, 0.5);
       transform: translateY(-1px);
-      box-shadow: 
+      box-shadow:
         0 6px 25px rgba(0, 0, 0, 0.35),
         inset 0 1px 0 rgba(255, 255, 255, 0.2);
       opacity: 1;
     }
-    
+
     .floating-toolbar.dashboard-open {
-      border-bottom-left-radius: 12px; /* Reduced radius */
+      border-bottom-left-radius: 12px;
+      /* Reduced radius */
       border-bottom-right-radius: 12px;
       border-bottom: none;
-      margin-bottom: 0; /* Remove any margin */
+      margin-bottom: 0;
+      /* Remove any margin */
     }
-    
+
     .smart-indicator {
-      width: 6px; /* Smaller indicator */
+      width: 6px;
+      /* Smaller indicator */
       height: 6px;
       border-radius: 50%;
       background: linear-gradient(45deg, #00ff87, #60efff);
-      margin-right: 10px; /* Reduced margin */
+      margin-right: 10px;
+      /* Reduced margin */
       animation: pulse 2s ease-in-out infinite;
       box-shadow: 0 0 8px rgba(0, 255, 135, 0.5);
       transition: all 0.3s ease;
       flex-shrink: 0;
     }
-    
+
     .smart-indicator.processing {
       background: linear-gradient(45deg, #ff6b6b, #ffa726);
       animation: spin 1s linear infinite;
       box-shadow: 0 0 8px rgba(255, 107, 107, 0.5);
     }
-    
+
     .smart-indicator.idle {
       background: rgba(255, 255, 255, 0.4);
       animation: none;
       box-shadow: none;
     }
-    
+
     @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.7; transform: scale(1.2); }
+
+      0%,
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      50% {
+        opacity: 0.7;
+        transform: scale(1.2);
+      }
     }
-    
+
     @keyframes spin {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
+      from {
+        transform: rotate(0deg);
+      }
+
+      to {
+        transform: rotate(360deg);
+      }
     }
-    
+
     .action-buttons {
       display: flex;
-      gap: 6px; /* Reduced gap */
+      gap: 6px;
+      /* Reduced gap */
       flex: 1;
       min-width: 0;
     }
-    
+
     .action-btn {
       display: flex;
       align-items: center;
-      gap: 6px; /* Reduced gap */
-      padding: 8px 14px; /* Reduced padding */
+      gap: 6px;
+      /* Reduced gap */
+      padding: 8px 14px;
+      /* Reduced padding */
       background: rgba(255, 255, 255, 0.12);
       border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 22px; /* Reduced radius */
+      border-radius: 22px;
+      /* Reduced radius */
       color: white;
-      font-size: 12px; /* Reduced font size */
+      font-size: 12px;
+      /* Reduced font size */
       font-weight: 500;
       cursor: pointer;
       transition: all 0.2s ease;
@@ -130,43 +158,47 @@
       min-width: 0;
       outline: none;
     }
-    
+
     .action-btn:hover {
       background: rgba(255, 255, 255, 0.2);
       border-color: rgba(255, 255, 255, 0.25);
       transform: translateY(-1px);
       box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
     }
-    
+
     .action-btn.primary {
       background: linear-gradient(135deg, rgba(96, 239, 255, 0.25), rgba(0, 255, 135, 0.25));
       border-color: rgba(96, 239, 255, 0.4);
     }
-    
+
     .action-btn.primary:hover {
       background: linear-gradient(135deg, rgba(96, 239, 255, 0.35), rgba(0, 255, 135, 0.35));
       border-color: rgba(96, 239, 255, 0.5);
     }
-    
+
     .dashboard-toggle {
       background: rgba(255, 255, 255, 0.08);
       border: 1px solid rgba(255, 255, 255, 0.12);
-      min-width: 35px; /* Reduced width */
-      padding: 8px 10px; /* Reduced padding */
-      margin-left: 3px; /* Reduced margin */
+      min-width: 35px;
+      /* Reduced width */
+      padding: 8px 10px;
+      /* Reduced padding */
+      margin-left: 3px;
+      /* Reduced margin */
     }
-    
+
     .dashboard-toggle:hover {
       background: rgba(255, 255, 255, 0.15);
     }
-    
+
     .dashboard-toggle.active {
       background: linear-gradient(135deg, rgba(96, 239, 255, 0.2), rgba(0, 255, 135, 0.2));
       border-color: rgba(96, 239, 255, 0.3);
     }
-    
+
     .icon {
-      width: 14px; /* Reduced icon size */
+      width: 14px;
+      /* Reduced icon size */
       height: 14px;
       display: inline-flex;
       align-items: center;
@@ -175,28 +207,35 @@
       flex-shrink: 0;
       pointer-events: none;
     }
-    
+
     .status-text {
-      font-size: 10px; /* Reduced font size */
+      font-size: 10px;
+      /* Reduced font size */
       color: rgba(255, 255, 255, 0.8);
-      margin-left: 6px; /* Reduced margin */
-      min-width: 35px; /* Reduced width */
+      margin-left: 6px;
+      /* Reduced margin */
+      min-width: 35px;
+      /* Reduced width */
       text-align: center;
       transition: all 0.2s ease;
       flex-shrink: 0;
       pointer-events: none;
     }
-    
+
     /* Seamless Dashboard Dropdown */
     .dashboard-dropdown {
-      position: relative; /* Changed to relative */
-      background: rgba(0, 0, 0, 0.4); /* Match toolbar background */
+      position: relative;
+      /* Changed to relative */
+      background: rgba(0, 0, 0, 0.4);
+      /* Match toolbar background */
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
       border: 1px solid rgba(255, 255, 255, 0.15);
-      border-top: none; /* Remove top border for seamless connection */
+      border-top: none;
+      /* Remove top border for seamless connection */
       border-radius: 0 0 16px 16px;
-      margin-top: -1px; /* Overlap with toolbar border */
+      margin-top: -1px;
+      /* Overlap with toolbar border */
       max-height: 0;
       overflow: hidden;
       transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
@@ -204,30 +243,37 @@
       z-index: 999;
       opacity: 0;
     }
-    
+
     .dashboard-dropdown.open {
-      max-height: 320px; /* Reduced for more compact design */
+      max-height: 320px;
+      /* Reduced for more compact design */
       opacity: 1;
     }
-    
+
     .dashboard-header {
-      padding: 14px 18px; /* Slightly reduced padding */
+      padding: 14px 18px;
+      /* Slightly reduced padding */
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
       background: rgba(0, 0, 0, 0.2);
     }
-    
+
     .dashboard-tabs {
       display: flex;
-      gap: 6px; /* Reduced gap for tighter layout */
-      margin-bottom: 10px; /* Reduced margin */
+      gap: 6px;
+      /* Reduced gap for tighter layout */
+      margin-bottom: 10px;
+      /* Reduced margin */
     }
-    
+
     .dashboard-tab {
       background: rgba(255, 255, 255, 0.08);
       border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 10px; /* Slightly reduced radius */
-      padding: 8px 14px; /* Reduced padding for compactness */
-      font-size: 11px; /* Smaller font */
+      border-radius: 10px;
+      /* Slightly reduced radius */
+      padding: 8px 14px;
+      /* Reduced padding for compactness */
+      font-size: 11px;
+      /* Smaller font */
       font-weight: 500;
       cursor: pointer;
       transition: all 0.2s ease;
@@ -238,64 +284,72 @@
       min-width: 0;
       outline: none;
     }
-    
+
     .dashboard-tab:hover {
       background: rgba(255, 255, 255, 0.15);
       border-color: rgba(255, 255, 255, 0.25);
       color: white;
     }
-    
+
     .dashboard-tab.active {
       background: linear-gradient(135deg, rgba(96, 239, 255, 0.25), rgba(0, 255, 135, 0.25));
       border: 1px solid rgba(96, 239, 255, 0.4);
       color: #60efff;
       box-shadow: 0 2px 8px rgba(96, 239, 255, 0.2);
     }
-    
+
     .dashboard-actions {
       display: flex;
-      gap: 6px; /* Reduced gap */
+      gap: 6px;
+      /* Reduced gap */
     }
-    
+
     .dashboard-btn {
       background: rgba(255, 255, 255, 0.08);
       border: 1px solid rgba(255, 255, 255, 0.15);
       color: rgba(255, 255, 255, 0.8);
-      padding: 6px 10px; /* Reduced padding */
-      border-radius: 8px; /* Smaller radius */
-      font-size: 10px; /* Smaller font */
+      padding: 6px 10px;
+      /* Reduced padding */
+      border-radius: 8px;
+      /* Smaller radius */
+      font-size: 10px;
+      /* Smaller font */
       font-weight: 500;
       cursor: pointer;
       transition: all 0.2s ease;
       outline: none;
     }
-    
+
     .dashboard-btn:hover {
       background: rgba(255, 255, 255, 0.15);
       border-color: rgba(255, 255, 255, 0.25);
       color: white;
     }
-    
+
     .dashboard-content {
-      padding: 16px; /* Reduced padding */
-      height: 240px; /* Reduced height for compactness */
+      padding: 16px;
+      /* Reduced padding */
+      height: 240px;
+      /* Reduced height for compactness */
       overflow-y: auto;
       display: flex;
       flex-direction: column;
     }
-    
+
     .dashboard-content.hidden {
       display: none;
     }
-    
+
     .screenshot-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); /* Slightly wider for better fit */
-      gap: 4px; /* Smaller gap for more cards */
+      grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+      /* Slightly wider for better fit */
+      gap: 4px;
+      /* Smaller gap for more cards */
       height: 100%;
       overflow-y: auto;
     }
-    
+
     .screenshot-card {
       background: rgba(255, 255, 255, 0.08);
       border: 1px solid rgba(255, 255, 255, 0.12);
@@ -303,19 +357,21 @@
       overflow: hidden;
       transition: all 0.2s ease;
       cursor: pointer;
-      height: 65px; /* Fixed short height */
+      height: 65px;
+      /* Fixed short height */
     }
-    
+
     .screenshot-card:hover {
       background: rgba(255, 255, 255, 0.12);
       border-color: rgba(96, 239, 255, 0.3);
       transform: translateY(-1px);
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     }
-    
+
     .screenshot-preview {
       width: 100%;
-      height: 45px; /* Larger preview area */
+      height: 45px;
+      /* Larger preview area */
       background: #1a1a1a;
       display: flex;
       align-items: center;
@@ -323,21 +379,23 @@
       overflow: hidden;
       position: relative;
     }
-    
+
     .screenshot-preview img {
       width: 100%;
       height: 100%;
       object-fit: cover;
     }
-    
+
     .screenshot-info {
-      padding: 2px 4px; /* Minimal padding */
-      height: 20px; /* Fixed height for info area */
+      padding: 2px 4px;
+      /* Minimal padding */
+      height: 20px;
+      /* Fixed height for info area */
       display: flex;
       flex-direction: column;
       justify-content: center;
     }
-    
+
     .screenshot-name {
       color: white;
       font-size: 8px;
@@ -348,14 +406,14 @@
       text-overflow: ellipsis;
       line-height: 1;
     }
-    
+
     .screenshot-date {
       color: rgba(255, 255, 255, 0.6);
       font-size: 7px;
       margin: 0;
       line-height: 1;
     }
-    
+
     .loading-state,
     .empty-state {
       padding: 30px 16px;
@@ -369,16 +427,17 @@
       justify-content: center;
       height: 100%;
     }
-    
+
     .internship-stats {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 8px;
       margin-bottom: 12px;
     }
-    
+
     .stat-card {
-      background: linear-gradient(135deg, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.2)); /* Darker background */
+      background: linear-gradient(135deg, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.2));
+      /* Darker background */
       border: 1px solid rgba(96, 239, 255, 0.3);
       border-radius: 8px;
       padding: 10px;
@@ -386,171 +445,200 @@
       transition: all 0.2s ease;
       backdrop-filter: blur(10px);
     }
-    
+
     .stat-card:hover {
       background: linear-gradient(135deg, rgba(96, 239, 255, 0.15), rgba(0, 255, 135, 0.1));
       border-color: rgba(96, 239, 255, 0.5);
       transform: translateY(-1px);
     }
-    
+
     .stat-number {
       font-size: 20px;
       font-weight: 700;
       color: #60efff;
       margin-bottom: 4px;
-      text-shadow: 0 0 8px rgba(96, 239, 255, 0.6); /* Stronger glow for visibility */
+      text-shadow: 0 0 8px rgba(96, 239, 255, 0.6);
+      /* Stronger glow for visibility */
     }
-    
+
     .stat-label {
       font-size: 9px;
       font-weight: 600;
-      color: rgba(255, 255, 255, 0.9); /* Much better contrast */
+      color: rgba(255, 255, 255, 0.9);
+      /* Much better contrast */
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
-    
+
     .internship-list {
       height: 150px;
       overflow-y: auto;
       border: 1px solid rgba(96, 239, 255, 0.2);
       border-radius: 8px;
-      background: linear-gradient(135deg, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.3)); /* Much darker background */
+      background: linear-gradient(135deg, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.3));
+      /* Much darker background */
       backdrop-filter: blur(15px);
     }
-    
+
     .internship-item {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 12px 16px; /* Increased padding for better readability */
+      padding: 12px 16px;
+      /* Increased padding for better readability */
       border-bottom: 1px solid rgba(96, 239, 255, 0.1);
       cursor: pointer;
       transition: all 0.2s ease;
       backdrop-filter: blur(5px);
     }
-    
+
     .internship-item:last-child {
       border-bottom: none;
     }
-    
+
     .internship-item:hover {
       background: linear-gradient(135deg, rgba(96, 239, 255, 0.15), rgba(0, 255, 135, 0.08));
       border-color: rgba(96, 239, 255, 0.3);
       transform: translateX(2px);
     }
-    
+
     .internship-info {
       flex: 1;
     }
-    
+
     .company-name {
       font-weight: 700;
-      font-size: 13px; /* Slightly larger for better readability */
+      font-size: 13px;
+      /* Slightly larger for better readability */
       color: #60efff;
       margin-bottom: 3px;
-      text-shadow: 0 0 6px rgba(96, 239, 255, 0.5); /* Stronger glow */
+      text-shadow: 0 0 6px rgba(96, 239, 255, 0.5);
+      /* Stronger glow */
     }
-    
+
     .job-details {
-      font-size: 10px; /* Slightly larger */
+      font-size: 10px;
+      /* Slightly larger */
       font-weight: 500;
-      color: rgba(255, 255, 255, 0.85); /* Much better contrast */
+      color: rgba(255, 255, 255, 0.85);
+      /* Much better contrast */
       letter-spacing: 0.3px;
     }
-    
+
     .status {
-      font-size: 9px; /* Slightly larger */
+      font-size: 9px;
+      /* Slightly larger */
       font-weight: 700;
-      padding: 4px 10px; /* More padding for readability */
+      padding: 4px 10px;
+      /* More padding for readability */
       border-radius: 12px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
       border: 1px solid;
       backdrop-filter: blur(10px);
-      min-width: 60px; /* Wider for better text fit */
+      min-width: 60px;
+      /* Wider for better text fit */
       text-align: center;
     }
-    
+
     .status.applied {
-      background: linear-gradient(135deg, rgba(96, 239, 255, 0.3), rgba(96, 239, 255, 0.2)); /* Stronger background */
+      background: linear-gradient(135deg, rgba(96, 239, 255, 0.3), rgba(96, 239, 255, 0.2));
+      /* Stronger background */
       border-color: rgba(96, 239, 255, 0.6);
-      color: #ffffff; /* White text for better contrast */
+      color: #ffffff;
+      /* White text for better contrast */
       text-shadow: 0 0 6px rgba(96, 239, 255, 0.6);
     }
-    
+
     .status.interview {
       background: linear-gradient(135deg, rgba(0, 255, 135, 0.3), rgba(0, 255, 135, 0.2));
       border-color: rgba(0, 255, 135, 0.6);
-      color: #ffffff; /* White text for better contrast */
+      color: #ffffff;
+      /* White text for better contrast */
       text-shadow: 0 0 6px rgba(0, 255, 135, 0.6);
     }
-    
+
     .status.offer {
       background: linear-gradient(135deg, rgba(255, 193, 7, 0.3), rgba(255, 193, 7, 0.2));
       border-color: rgba(255, 193, 7, 0.6);
-      color: #ffffff; /* White text for better contrast */
+      color: #ffffff;
+      /* White text for better contrast */
       text-shadow: 0 0 6px rgba(255, 193, 7, 0.6);
     }
-    
+
     .status.rejected {
       background: linear-gradient(135deg, rgba(255, 107, 107, 0.3), rgba(255, 107, 107, 0.2));
       border-color: rgba(255, 107, 107, 0.6);
-      color: #ffffff; /* White text for better contrast */
+      color: #ffffff;
+      /* White text for better contrast */
       text-shadow: 0 0 6px rgba(255, 107, 107, 0.6);
     }
-    
+
     /* Context Menu */
     .context-menu {
       position: absolute;
-      top: calc(100% + 8px); /* Reduced spacing */
+      top: calc(100% + 8px);
+      /* Reduced spacing */
       right: 0;
       background: rgba(0, 0, 0, 0.9);
       backdrop-filter: blur(20px);
       border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 10px; /* Reduced radius */
-      padding: 6px; /* Reduced padding */
-      min-width: 140px; /* Reduced width */
+      border-radius: 10px;
+      /* Reduced radius */
+      padding: 6px;
+      /* Reduced padding */
+      min-width: 140px;
+      /* Reduced width */
       opacity: 0;
       visibility: hidden;
-      transform: translateY(-8px); /* Reduced transform */
+      transform: translateY(-8px);
+      /* Reduced transform */
       transition: all 0.2s ease;
       z-index: 1001;
       box-shadow: 0 6px 25px rgba(0, 0, 0, 0.4);
     }
-    
+
     .context-menu.active {
       opacity: 1;
       visibility: visible;
       transform: translateY(0);
     }
-    
+
     .context-item {
-      padding: 8px 10px; /* Reduced padding */
+      padding: 8px 10px;
+      /* Reduced padding */
       color: white;
-      font-size: 12px; /* Reduced font size */
+      font-size: 12px;
+      /* Reduced font size */
       cursor: pointer;
-      border-radius: 5px; /* Reduced radius */
+      border-radius: 5px;
+      /* Reduced radius */
       transition: background 0.15s ease;
       display: flex;
       align-items: center;
-      gap: 6px; /* Reduced gap */
+      gap: 6px;
+      /* Reduced gap */
     }
-    
+
     .context-item:hover {
       background: rgba(255, 255, 255, 0.1);
     }
-    
+
     /* Hint Bubble */
     .hint-bubble {
       position: absolute;
-      top: -35px; /* Reduced offset */
+      top: -35px;
+      /* Reduced offset */
       left: 50%;
       transform: translateX(-50%);
       background: rgba(0, 0, 0, 0.9);
       color: white;
-      padding: 5px 10px; /* Reduced padding */
-      border-radius: 16px; /* Reduced radius */
-      font-size: 10px; /* Reduced font size */
+      padding: 5px 10px;
+      /* Reduced padding */
+      border-radius: 16px;
+      /* Reduced radius */
+      font-size: 10px;
+      /* Reduced font size */
       white-space: nowrap;
       opacity: 0;
       visibility: hidden;
@@ -560,42 +648,45 @@
       border: 1px solid rgba(255, 255, 255, 0.15);
       z-index: 1002;
     }
-    
+
     .hint-bubble.show {
       opacity: 1;
       visibility: visible;
-      transform: translateX(-50%) translateY(-3px); /* Reduced transform */
+      transform: translateX(-50%) translateY(-3px);
+      /* Reduced transform */
     }
-    
+
     .hint-bubble::after {
       content: '';
       position: absolute;
       top: 100%;
       left: 50%;
       transform: translateX(-50%);
-      border: 4px solid transparent; /* Reduced border */
+      border: 4px solid transparent;
+      /* Reduced border */
       border-top-color: rgba(0, 0, 0, 0.9);
     }
-    
+
     /* Scrollbar styling */
     .screenshot-grid::-webkit-scrollbar {
-      width: 4px; /* Reduced width */
+      width: 4px;
+      /* Reduced width */
     }
-    
+
     .screenshot-grid::-webkit-scrollbar-track {
       background: rgba(255, 255, 255, 0.05);
       border-radius: 2px;
     }
-    
+
     .screenshot-grid::-webkit-scrollbar-thumb {
       background: rgba(255, 255, 255, 0.2);
       border-radius: 2px;
     }
-    
+
     .screenshot-grid::-webkit-scrollbar-thumb:hover {
       background: rgba(255, 255, 255, 0.3);
     }
-    
+
     /* Keyboard focus styles */
     .action-btn:focus,
     .dashboard-btn:focus {
@@ -604,26 +695,37 @@
     }
   </style>
 </head>
+
 <body>
   <div class="toolbar-container">
     <div class="floating-toolbar" id="toolbar">
       <div class="smart-indicator" id="statusIndicator"></div>
       <div class="action-buttons">
         <button class="action-btn primary" id="captureBtn" tabindex="1">
-          <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
             <circle cx="12" cy="13" r="4"></circle>
           </svg>
           Capture
         </button>
         <button class="action-btn" id="analyzeBtn" tabindex="2">
-          <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
           </svg>
           Analyze
         </button>
-        <button class="action-btn dashboard-toggle" id="dashboardToggle" tabindex="3">
+        <button class="action-btn" id="gmailScanBtn" tabindex="4">
           <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect>
+            <polyline points="22,6 12,13 2,6"></polyline>
+          </svg>
+          Gmail Scan
+        </button>
+        <button class="action-btn dashboard-toggle" id="dashboardToggle" tabindex="3">
+          <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
             <line x1="9" y1="9" x2="19" y2="9"></line>
             <line x1="9" y1="15" x2="19" y2="15"></line>
@@ -633,7 +735,7 @@
         </button>
       </div>
       <div class="status-text" id="statusText">Ready</div>
-      
+
       <!-- Context Menu -->
       <div class="context-menu" id="contextMenu">
         <div class="context-item" data-action="tracker">
@@ -646,11 +748,11 @@
           👁️ Hide
         </div>
       </div>
-      
+
       <!-- Smart Hint Bubble -->
       <div class="hint-bubble" id="hintBubble"></div>
     </div>
-    
+
     <!-- Seamless Dashboard Dropdown -->
     <div class="dashboard-dropdown" id="dashboardDropdown">
       <div class="dashboard-header">
@@ -664,14 +766,14 @@
           <button class="dashboard-btn" id="clearAll">🗑️ Clear</button>
         </div>
       </div>
-      
+
       <!-- Screenshots Tab -->
       <div class="dashboard-content" id="screenshotsTab">
         <div class="screenshot-grid" id="screenshotGrid">
           <div class="loading-state">Loading screenshots...</div>
         </div>
       </div>
-      
+
       <!-- Internships Tab -->
       <div class="dashboard-content hidden" id="internshipsTab">
         <div class="internship-stats">
@@ -696,7 +798,731 @@
       </div>
     </div>
   </div>
+  <div class="email-settings-section" id="emailSettingsSection" style="display: none;">
+    <div class="tab-header">
+      <h3 class="tab-title">📧 Email Scanner</h3>
+      <div class="tab-actions">
+        <button class="tab-btn" id="emailSetupBtn">Setup</button>
+        <button class="tab-btn" id="emailScanBtn">Scan</button>
+      </div>
+    </div>
 
+    <div class="content-grid">
+      <!-- Authentication Status -->
+      <div class="email-auth-status" id="emailAuthStatus">
+        <div class="status-card">
+          <div class="status-indicator" id="authIndicator">🔴</div>
+          <div class="status-text">
+            <span id="authStatusText">Not Connected</span>
+            <small id="authStatusDetail">Gmail access required</small>
+          </div>
+          <button class="status-action" id="authActionBtn">Connect</button>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="email-quick-actions">
+        <button class="email-action-btn primary" id="quickScanBtn" disabled>
+          <span class="btn-icon">⚡</span>
+          <span class="btn-text">Quick Scan</span>
+          <small>Last 7 days</small>
+        </button>
+
+        <button class="email-action-btn" id="deepScanBtn" disabled>
+          <span class="btn-icon">🔍</span>
+          <span class="btn-text">Deep Scan</span>
+          <small>Last 6 months</small>
+        </button>
+
+        <button class="email-action-btn" id="customScanBtn" disabled>
+          <span class="btn-icon">⚙️</span>
+          <span class="btn-text">Custom Scan</span>
+          <small>Choose options</small>
+        </button>
+      </div>
+
+      <!-- Scan Statistics -->
+      <div class="email-stats" id="emailStats">
+        <div class="stat-row">
+          <span class="stat-label">Last Scan:</span>
+          <span class="stat-value" id="lastScanTime">Never</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Emails Found:</span>
+          <span class="stat-value" id="emailsFound">0</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">New Applications:</span>
+          <span class="stat-value" id="newApplications">0</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Auto-Scan:</span>
+          <span class="stat-value" id="autoScanStatus">Disabled</span>
+        </div>
+      </div>
+
+      <!-- Recent Results -->
+      <div class="email-results" id="emailResults">
+        <div class="results-header">
+          <h4>Recent Findings</h4>
+          <button class="results-btn" id="clearResultsBtn">Clear</button>
+        </div>
+        <div class="results-list" id="resultsList">
+          <div class="empty-results">No scan results yet</div>
+        </div>
+      </div>
+
+      <!-- Progress Indicator -->
+      <div class="email-progress" id="emailProgress" style="display: none;">
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div class="progress-text" id="progressText">Scanning emails...</div>
+        <button class="progress-cancel" id="cancelScanBtn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Email Settings Modal -->
+  <div class="email-modal" id="emailModal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Email Scanner Settings</h3>
+        <button class="modal-close" id="closeEmailModal">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="settings-section">
+          <h4>Gmail Connection</h4>
+          <div class="connection-status">
+            <span id="connectionStatus">Checking...</span>
+            <button id="testConnectionBtn">Test Connection</button>
+          </div>
+          <div class="connection-actions">
+            <button id="setupGmailBtn">Setup Gmail</button>
+            <button id="revokeAccessBtn">Revoke Access</button>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h4>Auto-Scan Settings</h4>
+          <label class="setting-item">
+            <input type="checkbox" id="autoScanEnabled">
+            <span>Enable automatic scanning</span>
+          </label>
+          <div class="setting-item">
+            <label for="scanInterval">Scan every:</label>
+            <select id="scanInterval">
+              <option value="6">6 hours</option>
+              <option value="12">12 hours</option>
+              <option value="24" selected>24 hours</option>
+              <option value="48">48 hours</option>
+              <option value="168">Weekly</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h4>Scan Options</h4>
+          <div class="setting-item">
+            <label for="defaultDaysBack">Default scan period:</label>
+            <select id="defaultDaysBack">
+              <option value="7">Last 7 days</option>
+              <option value="30">Last 30 days</option>
+              <option value="90" selected>Last 3 months</option>
+              <option value="180">Last 6 months</option>
+              <option value="365">Last year</option>
+            </select>
+          </div>
+          <div class="setting-item">
+            <label for="maxResults">Max emails per scan:</label>
+            <select id="maxResults">
+              <option value="25">25 emails</option>
+              <option value="50">50 emails</option>
+              <option value="100" selected>100 emails</option>
+              <option value="200">200 emails</option>
+              <option value="500">500 emails</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h4>Export & Data</h4>
+          <div class="export-actions">
+            <button id="exportJsonBtn">Export as JSON</button>
+            <button id="exportCsvBtn">Export as CSV</button>
+            <button id="clearAllDataBtn" class="danger">Clear All Data</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button id="saveEmailSettingsBtn" class="primary">Save Settings</button>
+        <button id="cancelEmailSettingsBtn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    /* Email Settings Styles */
+    .email-settings-section {
+      padding: 0;
+    }
+
+    .email-auth-status {
+      margin-bottom: 16px;
+    }
+
+    .status-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    .status-indicator {
+      font-size: 12px;
+      width: 20px;
+      text-align: center;
+    }
+
+    .status-text {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .status-text span {
+      color: white;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .status-text small {
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 10px;
+    }
+
+    .status-action {
+      background: linear-gradient(135deg, #00d4ff, #00ff87);
+      border: none;
+      border-radius: 6px;
+      padding: 6px 12px;
+      color: black;
+      font-size: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .status-action:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 212, 255, 0.3);
+    }
+
+    .email-quick-actions {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .email-action-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 12px 8px;
+      color: white;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: center;
+    }
+
+    .email-action-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .email-action-btn:not(:disabled):hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-1px);
+    }
+
+    .email-action-btn.primary {
+      background: linear-gradient(135deg, rgba(0, 212, 255, 0.2), rgba(0, 255, 135, 0.2));
+      border-color: rgba(0, 212, 255, 0.3);
+    }
+
+    .btn-icon {
+      font-size: 16px;
+    }
+
+    .btn-text {
+      font-size: 10px;
+      font-weight: 600;
+    }
+
+    .email-action-btn small {
+      font-size: 8px;
+      color: rgba(255, 255, 255, 0.6);
+      margin-top: 2px;
+    }
+
+    .email-stats {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 16px;
+    }
+
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .stat-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .stat-label {
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .stat-value {
+      font-size: 10px;
+      color: #60efff;
+      font-weight: 600;
+    }
+
+    .email-results {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .results-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(0, 0, 0, 0.2);
+    }
+
+    .results-header h4 {
+      margin: 0;
+      font-size: 12px;
+      color: white;
+      font-weight: 600;
+    }
+
+    .results-btn {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+      padding: 4px 8px;
+      color: white;
+      font-size: 9px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .results-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .results-list {
+      max-height: 120px;
+      overflow-y: auto;
+      padding: 8px;
+    }
+
+    .empty-results {
+      text-align: center;
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 10px;
+      padding: 20px;
+    }
+
+    .result-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px;
+      border-radius: 4px;
+      margin-bottom: 4px;
+      background: rgba(255, 255, 255, 0.05);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .result-item:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .result-info {
+      flex: 1;
+    }
+
+    .result-company {
+      font-size: 10px;
+      font-weight: 600;
+      color: #60efff;
+      margin-bottom: 2px;
+    }
+
+    .result-position {
+      font-size: 9px;
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    .result-confidence {
+      font-size: 8px;
+      color: rgba(255, 255, 255, 0.6);
+      padding: 2px 6px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.1);
+      white-space: nowrap;
+    }
+
+    .email-progress {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.9);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      padding: 20px;
+      min-width: 300px;
+      z-index: 10000;
+      text-align: center;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #00d4ff, #00ff87);
+      border-radius: 2px;
+      transition: width 0.3s ease;
+      width: 0%;
+    }
+
+    .progress-text {
+      color: white;
+      font-size: 12px;
+      margin-bottom: 16px;
+    }
+
+    .progress-cancel {
+      background: rgba(255, 107, 107, 0.2);
+      border: 1px solid rgba(255, 107, 107, 0.5);
+      border-radius: 6px;
+      padding: 6px 12px;
+      color: #ff6b6b;
+      font-size: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .progress-cancel:hover {
+      background: rgba(255, 107, 107, 0.3);
+    }
+
+    /* Email Modal Styles */
+    .email-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10001;
+    }
+
+    .modal-content {
+      background: linear-gradient(135deg, rgba(26, 26, 26, 0.95), rgba(45, 45, 45, 0.95));
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 16px;
+      max-width: 500px;
+      max-height: 80vh;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(0, 0, 0, 0.2);
+    }
+
+    .modal-header h3 {
+      margin: 0;
+      color: white;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 20px;
+      cursor: pointer;
+      padding: 0;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+    }
+
+    .modal-close:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+    }
+
+    .modal-body {
+      padding: 20px;
+      max-height: 60vh;
+      overflow-y: auto;
+    }
+
+    .settings-section {
+      margin-bottom: 24px;
+    }
+
+    .settings-section:last-child {
+      margin-bottom: 0;
+    }
+
+    .settings-section h4 {
+      margin: 0 0 12px 0;
+      color: #60efff;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .connection-status {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+
+    .connection-status span {
+      color: white;
+      font-size: 12px;
+    }
+
+    .connection-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .connection-actions button {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      padding: 10px;
+      color: white;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .connection-actions button:hover {
+      background: rgba(255, 255, 255, 0.15);
+      transform: translateY(-1px);
+    }
+
+    .setting-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      font-size: 12px;
+      color: white;
+    }
+
+    .setting-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .setting-item label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+
+    .setting-item input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: #00d4ff;
+    }
+
+    .setting-item select {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 6px;
+      padding: 6px 8px;
+      color: white;
+      font-size: 11px;
+      min-width: 120px;
+    }
+
+    .setting-item select option {
+      background: #1a1a1a;
+      color: white;
+    }
+
+    .export-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .export-actions button {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      padding: 10px;
+      color: white;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .export-actions button:hover {
+      background: rgba(255, 255, 255, 0.15);
+      transform: translateY(-1px);
+    }
+
+    .export-actions button.danger {
+      grid-column: 1 / -1;
+      background: rgba(255, 107, 107, 0.2);
+      border-color: rgba(255, 107, 107, 0.5);
+      color: #ff6b6b;
+    }
+
+    .export-actions button.danger:hover {
+      background: rgba(255, 107, 107, 0.3);
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      padding: 20px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(0, 0, 0, 0.2);
+    }
+
+    .modal-footer button {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      padding: 10px 16px;
+      color: white;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .modal-footer button:hover {
+      background: rgba(255, 255, 255, 0.15);
+      transform: translateY(-1px);
+    }
+
+    .modal-footer button.primary {
+      background: linear-gradient(135deg, #00d4ff, #00ff87);
+      border-color: rgba(0, 212, 255, 0.5);
+      color: black;
+      font-weight: 600;
+    }
+
+    .modal-footer button.primary:hover {
+      background: linear-gradient(135deg, #00b8e6, #00e671);
+      box-shadow: 0 4px 12px rgba(0, 212, 255, 0.3);
+    }
+
+    /* Scrollbar for modal */
+    .modal-body::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .modal-body::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 3px;
+    }
+
+    .modal-body::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, #00d4ff, #00ff87);
+      border-radius: 3px;
+    }
+
+    .modal-body::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(180deg, #00b8e6, #00e671);
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 600px) {
+      .modal-content {
+        margin: 20px;
+        max-width: none;
+        width: calc(100% - 40px);
+      }
+
+      .email-quick-actions {
+        grid-template-columns: 1fr;
+        gap: 6px;
+      }
+
+      .export-actions {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
   <script src="toolbar.js"></script>
 </body>
+
 </html>

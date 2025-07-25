@@ -1,0 +1,64 @@
+{
+    "openrouter": {
+      "apiKey": "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",
+      "apiUrl": "https://openrouter.ai/api/v1/chat/completions",
+      "model": "openai/gpt-3.5-turbo",
+      "maxTokens": 200,
+      "temperature": 0.1,
+      "enabled": true
+    },
+    "fallback": {
+      "useAiWhenPossible": true,
+      "confidenceThreshold": 30,
+      "skipAiForHighConfidence": false
+    },
+    "enhancement": {
+      "companyNameMapping": {
+        "wellsfargojobs": "Wells Fargo",
+        "googlechrome": "Google",
+        "microsoftcareers": "Microsoft",
+        "amazoncareers": "Amazon",
+        "applecareers": "Apple",
+        "metacareers": "Meta",
+        "netflixjobs": "Netflix",
+        "linkedincareers": "LinkedIn",
+        "salesforcecareers": "Salesforce",
+        "oraclecareers": "Oracle",
+        "googlecareers": "Google",
+        "microsoftjobs": "Microsoft",
+        "amazonjobs": "Amazon",
+        "applejobs": "Apple",
+        "metajobs": "Meta",
+        "facebookcareers": "Meta",
+        "facebookjobs": "Meta",
+        "teslacareers": "Tesla",
+        "teslajobs": "Tesla",
+        "ubercareers": "Uber",
+        "uberjobs": "Uber",
+        "airbnbcareers": "Airbnb",
+        "airbnbjobs": "Airbnb",
+        "spotifycareers": "Spotify",
+        "spotifyjobs": "Spotify"
+      },
+      "jobTitleNormalization": {
+        "swe": "Software Engineer",
+        "sr": "Senior",
+        "jr": "Junior",
+        "dev": "Developer",
+        "eng": "Engineer",
+        "mgr": "Manager",
+        "pm": "Product Manager",
+        "sde": "Software Development Engineer",
+        "qa": "Quality Assurance",
+        "ui": "UI",
+        "ux": "UX",
+        "fe": "Frontend",
+        "be": "Backend",
+        "fs": "Full Stack",
+        "ml": "Machine Learning",
+        "ai": "AI",
+        "devops": "DevOps",
+        "sre": "Site Reliability Engineer"
+      }
+    }
+  }

@@ -151,19 +151,6 @@ function setupEventListeners() {
       }
     });
   }
-
-  const gmailScanBtn = document.getElementById('gmailScanBtn');
-  if (gmailScanBtn) {
-    gmailScanBtn.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      showHint('Scanning Gmail for internships...');
-      if (window.electron && window.electron.scanGmail) {
-        await window.electron.scanGmail();
-      } else {
-        alert('Gmail scan integration not available in this build.');
-      }
-    });
-  }
 }
 
 function setupDragBehavior() {
@@ -974,779 +961,448 @@ window.addEventListener('beforeunload', () => {
   clearTimeout(fadeTimeout);
   clearTimeout(hintTimeout);
 });
-// Add this to your toolbar.js or create a new email-integration.js file
-
-class EmailIntegrationUI {
+class EmailScanManager {
   constructor() {
-    this.isScanning = false;
-    this.scanProgress = 0;
-    this.currentScanResults = [];
-    this.settings = {
-      autoScanEnabled: false,
-      scanInterval: 24,
-      defaultDaysBack: 90,
-      maxResults: 100
+    this.isInitialized = false;
+    this.authStatus = {
+      isAuthenticated: false,
+      hasCredentials: false
     };
     
-    this.initializeElements();
-    this.setupEventListeners();
-    this.loadInitialData();
+    this.setupEmailButton();
+    this.initializeEmailIntegration();
   }
 
-  initializeElements() {
-    // Main elements
-    this.emailSection = document.getElementById('emailSettingsSection');
-    this.authStatus = document.getElementById('emailAuthStatus');
-    this.authIndicator = document.getElementById('authIndicator');
-    this.authStatusText = document.getElementById('authStatusText');
-    this.authStatusDetail = document.getElementById('authStatusDetail');
-    this.authActionBtn = document.getElementById('authActionBtn');
-    
-    // Action buttons
-    this.quickScanBtn = document.getElementById('quickScanBtn');
-    this.deepScanBtn = document.getElementById('deepScanBtn');
-    this.customScanBtn = document.getElementById('customScanBtn');
-    
-    // Stats elements
-    this.lastScanTime = document.getElementById('lastScanTime');
-    this.emailsFound = document.getElementById('emailsFound');
-    this.newApplications = document.getElementById('newApplications');
-    this.autoScanStatus = document.getElementById('autoScanStatus');
-    
-    // Results elements
-    this.resultsList = document.getElementById('resultsList');
-    this.clearResultsBtn = document.getElementById('clearResultsBtn');
-    
-    // Progress elements
-    this.emailProgress = document.getElementById('emailProgress');
-    this.progressFill = document.getElementById('progressFill');
-    this.progressText = document.getElementById('progressText');
-    this.cancelScanBtn = document.getElementById('cancelScanBtn');
-    
-    // Modal elements
-    this.emailModal = document.getElementById('emailModal');
-    this.closeEmailModal = document.getElementById('closeEmailModal');
-    this.setupGmailBtn = document.getElementById('setupGmailBtn');
-    this.testConnectionBtn = document.getElementById('testConnectionBtn');
-    this.revokeAccessBtn = document.getElementById('revokeAccessBtn');
-    
-    // Settings elements
-    this.autoScanEnabled = document.getElementById('autoScanEnabled');
-    this.scanInterval = document.getElementById('scanInterval');
-    this.defaultDaysBack = document.getElementById('defaultDaysBack');
-    this.maxResults = document.getElementById('maxResults');
-    
-    // Export buttons
-    this.exportJsonBtn = document.getElementById('exportJsonBtn');
-    this.exportCsvBtn = document.getElementById('exportCsvBtn');
-    this.clearAllDataBtn = document.getElementById('clearAllDataBtn');
-    
-    // Modal action buttons
-    this.saveEmailSettingsBtn = document.getElementById('saveEmailSettingsBtn');
-    this.cancelEmailSettingsBtn = document.getElementById('cancelEmailSettingsBtn');
+  async initializeEmailIntegration() {
+    try {
+      const result = await window.electron.emailInitialize();
+      
+      if (result.success) {
+        this.authStatus = {
+          isAuthenticated: true,
+          hasCredentials: true
+        };
+        this.updateEmailButtonState();
+        console.log('✅ Email integration initialized');
+      } else if (result.needsSetup) {
+        this.authStatus = {
+          isAuthenticated: false,
+          hasCredentials: false
+        };
+        this.updateEmailButtonState();
+        console.log('⚠️ Email setup required');
+      } else if (result.needsAuth) {
+        this.authStatus = {
+          isAuthenticated: false,
+          hasCredentials: true
+        };
+        this.updateEmailButtonState();
+        console.log('⚠️ Email authentication required');
+      }
+      
+      this.isInitialized = true;
+    } catch (error) {
+      console.error('❌ Email integration initialization failed:', error);
+      this.updateEmailButtonState(error.message);
+    }
   }
 
-  setupEventListeners() {
-    // Authentication
-    this.authActionBtn?.addEventListener('click', () => this.handleAuthAction());
+  setupEmailButton() {
+    const gmailScanBtn = document.getElementById('gmailScanBtn');
     
-    // Scan buttons
-    this.quickScanBtn?.addEventListener('click', () => this.handleQuickScan());
-    this.deepScanBtn?.addEventListener('click', () => this.handleDeepScan());
-    this.customScanBtn?.addEventListener('click', () => this.handleCustomScan());
-    
-    // Results management
-    this.clearResultsBtn?.addEventListener('click', () => this.clearResults());
-    
-    // Progress
-    this.cancelScanBtn?.addEventListener('click', () => this.cancelScan());
-    
-    // Modal controls
-    this.closeEmailModal?.addEventListener('click', () => this.closeModal());
-    this.cancelEmailSettingsBtn?.addEventListener('click', () => this.closeModal());
-    this.saveEmailSettingsBtn?.addEventListener('click', () => this.saveSettings());
-    
-    // Settings actions
-    this.setupGmailBtn?.addEventListener('click', () => this.setupGmail());
-    this.testConnectionBtn?.addEventListener('click', () => this.testConnection());
-    this.revokeAccessBtn?.addEventListener('click', () => this.revokeAccess());
-    
-    // Export actions
-    this.exportJsonBtn?.addEventListener('click', () => this.exportResults('json'));
-    this.exportCsvBtn?.addEventListener('click', () => this.exportResults('csv'));
-    this.clearAllDataBtn?.addEventListener('click', () => this.clearAllData());
-    
-    // Listen for scan progress updates
-    if (window.electron?.onEmailScanProgress) {
-      window.electron.onEmailScanProgress((message) => {
-        this.updateScanProgress(message);
+    if (gmailScanBtn) {
+      gmailScanBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.handleEmailScanClick();
+      });
+
+      // Add hover effect
+      gmailScanBtn.addEventListener('mouseenter', () => {
+        this.showEmailButtonHint();
+      });
+
+      gmailScanBtn.addEventListener('mouseleave', () => {
+        hideHint();
       });
     }
-    
-    // Close modal on outside click
-    this.emailModal?.addEventListener('click', (e) => {
-      if (e.target === this.emailModal) {
-        this.closeModal();
-      }
-    });
   }
 
-  async loadInitialData() {
-    try {
-      // Load authentication status
-      await this.updateAuthStatus();
-      
-      // Load scan statistics
-      await this.updateScanStats();
-      
-      // Load recent results
-      await this.loadRecentResults();
-      
-      // Load settings
-      await this.loadSettings();
-      
-    } catch (error) {
-      console.error('Failed to load email integration data:', error);
-    }
-  }
+  updateEmailButtonState(errorMessage = null) {
+    const gmailScanBtn = document.getElementById('gmailScanBtn');
+    if (!gmailScanBtn) return;
 
-  async updateAuthStatus() {
-    try {
-      const status = await window.electron.emailGetAuthStatus();
-      
-      if (status.isAuthenticated) {
-        this.authIndicator.textContent = '🟢';
-        this.authStatusText.textContent = 'Connected';
-        this.authStatusDetail.textContent = 'Gmail access active';
-        this.authActionBtn.textContent = 'Settings';
-        
-        // Enable scan buttons
-        this.quickScanBtn.disabled = false;
-        this.deepScanBtn.disabled = false;
-        this.customScanBtn.disabled = false;
-        
-      } else if (status.hasCredentials) {
-        this.authIndicator.textContent = '🟡';
-        this.authStatusText.textContent = 'Setup Required';
-        this.authStatusDetail.textContent = 'Authentication needed';
-        this.authActionBtn.textContent = 'Authenticate';
-        
-      } else {
-        this.authIndicator.textContent = '🔴';
-        this.authStatusText.textContent = 'Not Setup';
-        this.authStatusDetail.textContent = 'Gmail credentials needed';
-        this.authActionBtn.textContent = 'Setup';
-      }
-      
-    } catch (error) {
-      console.error('Failed to get auth status:', error);
-      this.authIndicator.textContent = '❌';
-      this.authStatusText.textContent = 'Error';
-      this.authStatusDetail.textContent = 'Connection failed';
-    }
-  }
+    // Reset classes
+    gmailScanBtn.classList.remove('authenticated', 'needs-setup', 'needs-auth', 'error');
 
-  async updateScanStats() {
-    try {
-      const stats = await window.electron.emailGetScanStats();
-      
-      if (stats) {
-        this.lastScanTime.textContent = stats.lastScanTime ? 
-          new Date(stats.lastScanTime).toLocaleDateString() : 'Never';
-        this.emailsFound.textContent = stats.totalEmailsFound || 0;
-        this.newApplications.textContent = stats.newApplications || 0;
-        this.autoScanStatus.textContent = stats.autoScanEnabled ? 
-          `Every ${stats.scanInterval}h` : 'Disabled';
-      }
-      
-    } catch (error) {
-      console.error('Failed to get scan stats:', error);
-    }
-  }
-
-  async loadRecentResults() {
-    try {
-      const results = await window.electron.emailGetRecentResults(5);
-      this.currentScanResults = results;
-      this.renderResults(results);
-      
-    } catch (error) {
-      console.error('Failed to load recent results:', error);
-      this.renderResults([]);
-    }
-  }
-
-  renderResults(results) {
-    if (!this.resultsList) return;
-    
-    if (results.length === 0) {
-      this.resultsList.innerHTML = '<div class="empty-results">No scan results yet</div>';
-      return;
-    }
-    
-    this.resultsList.innerHTML = results.map(result => `
-      <div class="result-item" data-id="${result.email.id}">
-        <div class="result-info">
-          <div class="result-company">${result.internship.companyName}</div>
-          <div class="result-position">${result.internship.jobTitle}</div>
-        </div>
-        <div class="result-confidence">${result.internship.confidence}%</div>
-      </div>
-    `).join('');
-    
-    // Add click handlers
-    this.resultsList.querySelectorAll('.result-item').forEach(item => {
-      item.addEventListener('click', (e) => {
-        const id = e.currentTarget.dataset.id;
-        this.showResultDetails(id);
-      });
-    });
-  }
-
-  async handleAuthAction() {
-    const status = await window.electron.emailGetAuthStatus();
-    
-    if (status.isAuthenticated) {
-      // Show settings modal
-      this.showModal();
+    if (errorMessage) {
+      gmailScanBtn.classList.add('error');
+      gmailScanBtn.disabled = true;
+      gmailScanBtn.title = `Error: ${errorMessage}`;
+    } else if (this.authStatus.isAuthenticated) {
+      gmailScanBtn.classList.add('authenticated');
+      gmailScanBtn.disabled = false;
+      gmailScanBtn.title = 'Scan Gmail for internship applications';
+    } else if (this.authStatus.hasCredentials) {
+      gmailScanBtn.classList.add('needs-auth');
+      gmailScanBtn.disabled = false;
+      gmailScanBtn.title = 'Click to authenticate with Gmail';
     } else {
-      // Setup or authenticate Gmail
-      await this.setupGmail();
+      gmailScanBtn.classList.add('needs-setup');
+      gmailScanBtn.disabled = false;
+      gmailScanBtn.title = 'Click to setup Gmail integration';
     }
   }
 
-  async handleQuickScan() {
-    if (this.isScanning) return;
+  showEmailButtonHint() {
+    let hintText = 'Gmail scan';
     
-    try {
-      this.startScanUI('Quick scanning last 7 days...');
-      
-      const results = await window.electron.emailQuickScan();
-      await this.processScanResults(results);
-      
-    } catch (error) {
-      this.showError('Quick scan failed', error.message);
-    } finally {
-      this.endScanUI();
+    if (!this.isInitialized) {
+      hintText = 'Initializing Gmail...';
+    } else if (!this.authStatus.hasCredentials) {
+      hintText = 'Setup Gmail integration';
+    } else if (!this.authStatus.isAuthenticated) {
+      hintText = 'Authenticate Gmail';
+    } else {
+      hintText = 'Scan emails for internships';
     }
+    
+    showHint(hintText);
   }
 
-  async handleDeepScan() {
-    if (this.isScanning) return;
-    
-    const confirmed = confirm('Deep scan will search the last 6 months of emails. This may take several minutes. Continue?');
-    if (!confirmed) return;
-    
-    try {
-      this.startScanUI('Deep scanning last 6 months...');
-      
-      const results = await window.electron.emailDeepScan();
-      await this.processScanResults(results);
-      
-    } catch (error) {
-      this.showError('Deep scan failed', error.message);
-    } finally {
-      this.endScanUI();
-    }
-  }
-
-  async handleCustomScan() {
-    if (this.isScanning) return;
-    
-    // Show custom scan options
-    const daysBack = prompt('How many days back to scan?', '30');
-    if (!daysBack) return;
-    
-    const maxResults = prompt('Maximum emails to scan?', '50');
-    if (!maxResults) return;
-    
-    try {
-      this.startScanUI(`Custom scanning last ${daysBack} days...`);
-      
-      const results = await window.electron.emailScanInternships({
-        daysBack: parseInt(daysBack),
-        maxResults: parseInt(maxResults)
-      });
-      
-      await this.processScanResults(results);
-      
-    } catch (error) {
-      this.showError('Custom scan failed', error.message);
-    } finally {
-      this.endScanUI();
-    }
-  }
-
-  async processScanResults(results) {
-    console.log('Processing scan results:', results.length);
-    
-    if (results.length === 0) {
-      this.showInfo('No New Applications', 'No new internship applications found in your emails.');
+  async handleEmailScanClick() {
+    if (!this.isInitialized) {
+      showHint('Please wait, initializing...');
       return;
     }
-    
-    // Show results summary
-    const newApps = results.filter(r => r.isNew).length;
-    const message = `Found ${results.length} internship emails.\n${newApps} new applications detected.\n\nAdd them to your tracker?`;
-    
-    const shouldAdd = confirm(message);
-    
-    if (shouldAdd) {
-      try {
-        const addResult = await window.electron.emailAddToTracker(results, { 
-          autoAdd: true, 
-          confirmEach: false 
-        });
-        
-        this.showSuccess('Applications Added', 
-          `Added ${addResult.added} new applications to your tracker.`);
-        
-        // Update UI
-        await this.updateScanStats();
-        await this.loadRecentResults();
-        
-        // Notify other parts of the app
-        if (window.loadInternshipData) {
-          window.loadInternshipData();
-        }
-        
-      } catch (error) {
-        this.showError('Add Failed', `Failed to add applications: ${error.message}`);
-      }
-    }
-  }
 
-  startScanUI(message) {
-    this.isScanning = true;
-    this.scanProgress = 0;
-    
-    // Disable scan buttons
-    this.quickScanBtn.disabled = true;
-    this.deepScanBtn.disabled = true;
-    this.customScanBtn.disabled = true;
-    
-    // Show progress
-    if (this.emailProgress) {
-      this.emailProgress.style.display = 'block';
-      this.progressText.textContent = message;
-      this.progressFill.style.width = '0%';
-    }
-  }
-
-  updateScanProgress(message, progress = null) {
-    if (this.progressText) {
-      this.progressText.textContent = message;
-    }
-    
-    if (progress !== null && this.progressFill) {
-      this.scanProgress = Math.min(100, Math.max(0, progress));
-      this.progressFill.style.width = `${this.scanProgress}%`;
-    }
-  }
-
-  endScanUI() {
-    this.isScanning = false;
-    
-    // Re-enable scan buttons
-    this.quickScanBtn.disabled = false;
-    this.deepScanBtn.disabled = false;
-    this.customScanBtn.disabled = false;
-    
-    // Hide progress
-    if (this.emailProgress) {
-      setTimeout(() => {
-        this.emailProgress.style.display = 'none';
-      }, 1000);
-    }
-  }
-
-  cancelScan() {
-    // In a real implementation, you'd cancel the ongoing scan
-    this.endScanUI();
-    this.showInfo('Scan Cancelled', 'Email scan was cancelled.');
-  }
-
-  async clearResults() {
-    const confirmed = confirm('Clear all email scan results? This cannot be undone.');
-    if (!confirmed) return;
-    
     try {
-      await window.electron.emailClearResults();
-      await this.loadRecentResults();
-      await this.updateScanStats();
-      this.showSuccess('Results Cleared', 'All email scan results have been cleared.');
-      
-    } catch (error) {
-      this.showError('Clear Failed', error.message);
-    }
-  }
-
-  showModal() {
-    if (this.emailModal) {
-      this.emailModal.style.display = 'flex';
-      this.loadModalSettings();
-    }
-  }
-
-  closeModal() {
-    if (this.emailModal) {
-      this.emailModal.style.display = 'none';
-    }
-  }
-
-  async loadModalSettings() {
-    try {
-      const stats = await window.electron.emailGetScanStats();
-      
-      if (stats) {
-        this.autoScanEnabled.checked = stats.autoScanEnabled;
-        this.scanInterval.value = stats.scanInterval || 24;
-        this.settings.autoScanEnabled = stats.autoScanEnabled;
-        this.settings.scanInterval = stats.scanInterval || 24;
-      }
-      
-    } catch (error) {
-      console.error('Failed to load modal settings:', error);
-    }
-  }
-
-  async loadSettings() {
-    // Load settings from localStorage or electron store
-    const stored = localStorage.getItem('emailIntegrationSettings');
-    if (stored) {
-      this.settings = { ...this.settings, ...JSON.parse(stored) };
-    }
-    
-    // Update UI elements
-    if (this.defaultDaysBack) {
-      this.defaultDaysBack.value = this.settings.defaultDaysBack;
-    }
-    if (this.maxResults) {
-      this.maxResults.value = this.settings.maxResults;
-    }
-  }
-
-  async saveSettings() {
-    try {
-      // Get values from form
-      const newSettings = {
-        autoScanEnabled: this.autoScanEnabled.checked,
-        scanInterval: parseInt(this.scanInterval.value),
-        defaultDaysBack: parseInt(this.defaultDaysBack.value),
-        maxResults: parseInt(this.maxResults.value)
-      };
-      
-      // Save to electron
-      await window.electron.emailConfigureAutoScan(
-        newSettings.autoScanEnabled, 
-        newSettings.scanInterval
-      );
-      
-      // Save locally
-      this.settings = { ...this.settings, ...newSettings };
-      localStorage.setItem('emailIntegrationSettings', JSON.stringify(this.settings));
-      
-      this.closeModal();
-      this.showSuccess('Settings Saved', 'Email integration settings have been saved.');
-      
-      // Update UI
-      await this.updateScanStats();
-      
-    } catch (error) {
-      this.showError('Save Failed', error.message);
-    }
-  }
-
-  async setupGmail() {
-    try {
-      const result = await window.electron.emailSetupGmail();
-      if (result) {
-        await this.updateAuthStatus();
-        this.showSuccess('Setup Complete', 'Gmail has been set up successfully!');
-      }
-    } catch (error) {
-      this.showError('Setup Failed', error.message);
-    }
-  }
-
-  async testConnection() {
-    try {
-      this.testConnectionBtn.textContent = 'Testing...';
-      this.testConnectionBtn.disabled = true;
-      
-      const result = await window.electron.emailTestConnection();
-      
-      if (result) {
-        this.showSuccess('Connection Test', 'Gmail connection is working properly!');
+      if (!this.authStatus.hasCredentials) {
+        await this.setupGmailCredentials();
+      } else if (!this.authStatus.isAuthenticated) {
+        await this.authenticateGmail();
       } else {
-        this.showError('Connection Test', 'Gmail connection failed. Please check your setup.');
+        await this.performEmailScan();
       }
-      
     } catch (error) {
-      this.showError('Connection Test', error.message);
-    } finally {
-      this.testConnectionBtn.textContent = 'Test Connection';
-      this.testConnectionBtn.disabled = false;
+      console.error('❌ Email scan error:', error);
+      showHint(`Error: ${error.message}`);
     }
   }
 
-  async revokeAccess() {
-    const confirmed = confirm('Are you sure you want to revoke Gmail access? This will clear all stored data and tokens.');
-    if (!confirmed) return;
-    
+  async setupGmailCredentials() {
     try {
-      const result = await window.electron.emailRevokeAccess();
-      if (result) {
-        await this.updateAuthStatus();
-        await this.updateScanStats();
-        await this.loadRecentResults();
-        this.closeModal();
-        this.showSuccess('Access Revoked', 'Gmail access has been revoked successfully.');
+      showHint('Opening setup dialog...');
+      
+      const result = await window.electron.emailSetupCredentials();
+      
+      if (result.success) {
+        this.authStatus.hasCredentials = true;
+        this.updateEmailButtonState();
+        showHint('Credentials saved! Click again to authenticate.');
+      } else if (!result.cancelled) {
+        showHint(`Setup failed: ${result.error}`);
       }
     } catch (error) {
-      this.showError('Revoke Failed', error.message);
+      console.error('❌ Credential setup failed:', error);
+      showHint('Setup failed');
     }
   }
 
-  async exportResults(format) {
+  async authenticateGmail() {
     try {
-      const result = await window.electron.emailExportResults(format);
-      if (result) {
-        this.showSuccess('Export Complete', `Results exported as ${format.toUpperCase()} successfully!`);
+      showHint('Starting Gmail authentication...');
+      
+      const result = await window.electron.emailStartAuth();
+      
+      if (result.success) {
+        this.authStatus.isAuthenticated = true;
+        this.updateEmailButtonState();
+        showHint(`Connected to ${result.email}!`);
+        
+        // Automatically perform first scan
+        setTimeout(() => {
+          this.performEmailScan();
+        }, 1000);
+      } else if (!result.cancelled) {
+        showHint(`Authentication failed: ${result.error}`);
       }
     } catch (error) {
-      this.showError('Export Failed', error.message);
+      console.error('❌ Gmail authentication failed:', error);
+      showHint('Authentication failed');
     }
   }
 
-  async clearAllData() {
-    const confirmed = confirm('Clear ALL email integration data? This includes:\n- Scan results\n- Stored tokens\n- Settings\n\nThis cannot be undone.');
-    if (!confirmed) return;
-    
-    const doubleConfirm = confirm('Are you absolutely sure? This will completely reset the email integration.');
-    if (!doubleConfirm) return;
-    
+  async performEmailScan() {
     try {
-      await window.electron.emailRevokeAccess();
-      await window.electron.emailClearResults();
-      localStorage.removeItem('emailIntegrationSettings');
+      setStatus('processing');
+      showHint('Scanning Gmail for internships...');
       
-      // Reset UI
-      await this.updateAuthStatus();
-      await this.updateScanStats();
-      await this.loadRecentResults();
+      // Show scan options
+      const scanType = await this.showScanOptions();
       
-      this.closeModal();
-      this.showSuccess('Data Cleared', 'All email integration data has been cleared.');
+      if (!scanType) {
+        setStatus('ready');
+        return;
+      }
+
+      let results;
       
+      if (scanType === 'quick') {
+        results = await window.electron.emailQuickScan();
+        showHint(`Quick scan complete! Found ${results.length} emails.`);
+      } else if (scanType === 'deep') {
+        results = await window.electron.emailDeepScan();
+        showHint(`Deep scan complete! Found ${results.length} emails.`);
+      } else {
+        // Custom scan
+        results = await window.electron.emailScanInternships(scanType);
+        showHint(`Scan complete! Found ${results.length} emails.`);
+      }
+
+      // Update internship data if new applications were added
+      if (results.length > 0) {
+        const newApps = results.filter(r => r.isNew).length;
+        if (newApps > 0) {
+          loadInternshipData(); // Refresh internship display
+          showHint(`Added ${newApps} new applications!`);
+        }
+      }
+
+      setStatus('ready');
     } catch (error) {
-      this.showError('Clear Failed', error.message);
+      console.error('❌ Email scan failed:', error);
+      showHint(`Scan failed: ${error.message}`);
+      setStatus('ready');
     }
   }
 
-  showResultDetails(emailId) {
-    const result = this.currentScanResults.find(r => r.email.id === emailId);
-    if (!result) return;
-    
-    const details = `
-Company: ${result.internship.companyName}
-Position: ${result.internship.jobTitle}
-Location: ${result.internship.location}
-Status: ${result.internship.status}
-Confidence: ${result.internship.confidence}%
-
-Email Subject: ${result.email.subject}
-From: ${result.email.from}
-Date: ${new Date(result.email.date).toLocaleDateString()}
-
-${result.isNew ? 'This is a NEW application not yet in your tracker.' : 'This application already exists in your tracker.'}
-    `.trim();
-    
-    alert(details);
-  }
-
-  // Utility methods for showing messages
-  showSuccess(title, message) {
-    this.showNotification('success', title, message);
-  }
-
-  showError(title, message) {
-    this.showNotification('error', title, message);
-  }
-
-  showInfo(title, message) {
-    this.showNotification('info', title, message);
-  }
-
-  showNotification(type, title, message) {
-    // Create a simple notification
-    const notification = document.createElement('div');
-    notification.className = `email-notification ${type}`;
-    notification.innerHTML = `
-      <div class="notification-header">
-        <span class="notification-icon">${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'}</span>
-        <span class="notification-title">${title}</span>
-        <button class="notification-close">&times;</button>
-      </div>
-      <div class="notification-message">${message}</div>
-    `;
-    
-    // Style the notification
-    notification.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background: ${type === 'success' ? 'rgba(0, 255, 135, 0.1)' : 
-                   type === 'error' ? 'rgba(255, 107, 107, 0.1)' : 
-                   'rgba(96, 239, 255, 0.1)'};
-      border: 1px solid ${type === 'success' ? 'rgba(0, 255, 135, 0.3)' : 
-                         type === 'error' ? 'rgba(255, 107, 107, 0.3)' : 
-                         'rgba(96, 239, 255, 0.3)'};
-      border-radius: 12px;
-      padding: 16px;
-      max-width: 300px;
-      backdrop-filter: blur(10px);
-      z-index: 10002;
-      animation: slideInRight 0.3s ease;
-      color: white;
-      font-size: 12px;
-    `;
-    
-    // Add styles for notification elements
-    const style = document.createElement('style');
-    style.textContent = `
-      .notification-header {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-bottom: 8px;
-      }
-      .notification-title {
-        flex: 1;
-        font-weight: 600;
-      }
-      .notification-close {
-        background: none;
-        border: none;
-        color: rgba(255, 255, 255, 0.7);
-        cursor: pointer;
-        font-size: 16px;
-        padding: 0;
-        width: 20px;
-        height: 20px;
+  async showScanOptions() {
+    return new Promise((resolve) => {
+      // Create a simple modal for scan options
+      const modal = document.createElement('div');
+      modal.className = 'scan-options-modal';
+      modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        backdrop-filter: blur(10px);
         display: flex;
         align-items: center;
         justify-content: center;
-        border-radius: 4px;
-      }
-      .notification-close:hover {
-        background: rgba(255, 255, 255, 0.1);
-        color: white;
-      }
-      .notification-message {
-        font-size: 11px;
-        line-height: 1.4;
-        color: rgba(255, 255, 255, 0.9);
-      }
-      @keyframes slideInRight {
-        from {
-          transform: translateX(100%);
-          opacity: 0;
+        z-index: 10000;
+        animation: fadeIn 0.3s ease;
+      `;
+
+      modal.innerHTML = `
+        <div style="
+          background: linear-gradient(135deg, rgba(26, 26, 26, 0.95), rgba(45, 45, 45, 0.95));
+          backdrop-filter: blur(20px);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          border-radius: 16px;
+          padding: 30px;
+          max-width: 400px;
+          text-align: center;
+          color: white;
+        ">
+          <h3 style="margin: 0 0 20px 0; color: #60efff;">📧 Gmail Scan Options</h3>
+          <p style="margin: 0 0 20px 0; color: rgba(255, 255, 255, 0.8); font-size: 14px;">
+            Choose how you want to scan your emails:
+          </p>
+          
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <button class="scan-option-btn" data-type="quick" style="
+              background: linear-gradient(135deg, rgba(0, 212, 255, 0.2), rgba(0, 255, 135, 0.2));
+              border: 1px solid rgba(0, 212, 255, 0.3);
+              color: white;
+              padding: 15px;
+              border-radius: 8px;
+              cursor: pointer;
+              transition: all 0.2s ease;
+            ">
+              <strong>⚡ Quick Scan</strong><br>
+              <small>Last 7 days • ~25 emails • Fast</small>
+            </button>
+            
+            <button class="scan-option-btn" data-type="deep" style="
+              background: linear-gradient(135deg, rgba(255, 167, 38, 0.2), rgba(255, 107, 107, 0.2));
+              border: 1px solid rgba(255, 167, 38, 0.3);
+              color: white;
+              padding: 15px;
+              border-radius: 8px;
+              cursor: pointer;
+              transition: all 0.2s ease;
+            ">
+              <strong>🔍 Deep Scan</strong><br>
+              <small>Last 6 months • ~100 emails • Thorough</small>
+            </button>
+            
+            <button class="scan-option-btn" data-type="custom" style="
+              background: rgba(255, 255, 255, 0.1);
+              border: 1px solid rgba(255, 255, 255, 0.2);
+              color: white;
+              padding: 15px;
+              border-radius: 8px;
+              cursor: pointer;
+              transition: all 0.2s ease;
+            ">
+              <strong>⚙️ Custom Scan</strong><br>
+              <small>Choose your own settings</small>
+            </button>
+          </div>
+          
+          <button id="cancelScanOptions" style="
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.6);
+            padding: 10px;
+            margin-top: 15px;
+            cursor: pointer;
+            font-size: 12px;
+          ">Cancel</button>
+        </div>
+      `;
+
+      document.body.appendChild(modal);
+
+      // Add event listeners
+      modal.querySelectorAll('.scan-option-btn').forEach(btn => {
+        btn.addEventListener('mouseenter', () => {
+          btn.style.transform = 'translateY(-2px) scale(1.02)';
+        });
+        
+        btn.addEventListener('mouseleave', () => {
+          btn.style.transform = 'translateY(0) scale(1)';
+        });
+        
+        btn.addEventListener('click', () => {
+          const type = btn.dataset.type;
+          modal.remove();
+          
+          if (type === 'custom') {
+            // Show custom options
+            this.showCustomScanOptions().then(resolve);
+          } else {
+            resolve(type);
+          }
+        });
+      });
+
+      document.getElementById('cancelScanOptions').addEventListener('click', () => {
+        modal.remove();
+        resolve(null);
+      });
+
+      // Close on outside click
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          modal.remove();
+          resolve(null);
         }
-        to {
-          transform: translateX(0);
-          opacity: 1;
-        }
-      }
-      @keyframes slideOutRight {
-        from {
-          transform: translateX(0);
-          opacity: 1;
-        }
-        to {
-          transform: translateX(100%);
-          opacity: 0;
-        }
-      }
-    `;
-    
-    document.head.appendChild(style);
-    document.body.appendChild(notification);
-    
-    // Auto-close after 5 seconds
-    const autoClose = setTimeout(() => {
-      this.removeNotification(notification);
-    }, 5000);
-    
-    // Manual close button
-    const closeBtn = notification.querySelector('.notification-close');
-    closeBtn.addEventListener('click', () => {
-      clearTimeout(autoClose);
-      this.removeNotification(notification);
+      });
     });
   }
 
-  removeNotification(notification) {
-    notification.style.animation = 'slideOutRight 0.3s ease';
-    setTimeout(() => {
-      if (notification.parentNode) {
-        notification.parentNode.removeChild(notification);
+  async showCustomScanOptions() {
+    return new Promise((resolve) => {
+      const daysBack = prompt('How many days back to scan?', '30');
+      if (!daysBack) {
+        resolve(null);
+        return;
       }
-    }, 300);
+
+      const maxResults = prompt('Maximum emails to scan?', '50');
+      if (!maxResults) {
+        resolve(null);
+        return;
+      }
+
+      resolve({
+        daysBack: parseInt(daysBack) || 30,
+        maxResults: parseInt(maxResults) || 50
+      });
+    });
   }
 
-  // Public method to show/hide the email section
-  toggleEmailSection(show) {
-    if (this.emailSection) {
-      this.emailSection.style.display = show ? 'block' : 'none';
+  // Method to refresh auth status
+  async refreshAuthStatus() {
+    try {
+      const status = await window.electron.emailGetAuthStatus();
+      this.authStatus = status;
+      this.updateEmailButtonState();
+    } catch (error) {
+      console.error('❌ Error refreshing auth status:', error);
     }
   }
 
-  // Refresh all data
-  async refresh() {
-    await this.loadInitialData();
-  }
-
-  // Get current status for external use
-  getStatus() {
-    return {
-      isScanning: this.isScanning,
-      scanProgress: this.scanProgress,
-      resultsCount: this.currentScanResults.length,
-      settings: this.settings
-    };
+  // Method to test connection
+  async testConnection() {
+    try {
+      const result = await window.electron.emailTestConnection();
+      
+      if (result.success) {
+        showHint(`Connected to ${result.email}`);
+        this.authStatus.isAuthenticated = true;
+        this.updateEmailButtonState();
+      } else {
+        showHint(`Connection failed: ${result.error}`);
+        if (result.needsReauth) {
+          this.authStatus.isAuthenticated = false;
+          this.updateEmailButtonState();
+        }
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('❌ Connection test failed:', error);
+      showHint('Connection test failed');
+      return { success: false, error: error.message };
+    }
   }
 }
 
-// Initialize email integration when the page loads
-let emailIntegrationUI = null;
+// Initialize email scan manager when the toolbar loads
+let emailScanManager = null;
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Only initialize if the email section exists
-  if (document.getElementById('emailSettingsSection')) {
-    emailIntegrationUI = new EmailIntegrationUI();
-    
-    // Make it globally available
-    window.emailIntegrationUI = emailIntegrationUI;
-    
-    console.log('📧 Email Integration UI initialized');
-  }
+  // Initialize email scan manager
+  emailScanManager = new EmailScanManager();
+  
+  // Make it globally available for debugging
+  window.emailScanManager = emailScanManager;
+  
+  console.log('📧 Email scan manager initialized');
 });
 
-// Add email tab to existing dashboard tabs functionality
-if (typeof switchTab === 'function') {
-  const originalSwitchTab = switchTab;
-  switchTab = function(tabName) {
-    originalSwitchTab(tabName);
-    
-    // Show/hide email section based on tab
-    if (emailIntegrationUI) {
-      emailIntegrationUI.toggleEmailSection(tabName === 'email');
-    }
-  };
-}
+// Add CSS for the email button states
+const emailButtonStyles = document.createElement('style');
+emailButtonStyles.textContent = `
+  #gmailScanBtn.authenticated {
+    background: linear-gradient(135deg, rgba(0, 255, 135, 0.25), rgba(96, 239, 255, 0.25));
+    border-color: rgba(0, 255, 135, 0.4);
+  }
+  
+  #gmailScanBtn.needs-auth {
+    background: linear-gradient(135deg, rgba(255, 193, 7, 0.25), rgba(255, 167, 38, 0.25));
+    border-color: rgba(255, 193, 7, 0.4);
+  }
+  
+  #gmailScanBtn.needs-setup {
+    background: linear-gradient(135deg, rgba(108, 117, 125, 0.25), rgba(73, 80, 87, 0.25));
+    border-color: rgba(108, 117, 125, 0.4);
+  }
+  
+  #gmailScanBtn.error {
+    background: linear-gradient(135deg, rgba(255, 107, 107, 0.25), rgba(220, 53, 69, 0.25));
+    border-color: rgba(255, 107, 107, 0.4);
+  }
+  
+  .scan-options-modal .scan-option-btn:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+  }
+`;
 
-// Export for use in other files
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { EmailIntegrationUI };
-}
+document.head.appendChild(emailButtonStyles);

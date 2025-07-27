@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { google } = require('googleapis');
 const Store = require('electron-store');
+const { shell } = require('electron');
 
 // Initialize email store
 const emailStore = new Store({ name: 'email-settings' });
@@ -12,6 +13,10 @@ class GmailScanner {
     this.gmail = null;
     this.oauth2Client = null;
     this.isAuthenticated = false;
+    this.authInProgress = false;
+    
+    // Simplified OAuth redirect URI for desktop apps
+    this.REDIRECT_URI = 'urn:ietf:wg:oauth:2.0:oob';
     
     // Email patterns for detecting internship applications
     this.internshipPatterns = {
@@ -32,35 +37,32 @@ class GmailScanner {
         /summer.*internship/i,
         /co-?op.*application/i,
         /graduate.*program/i,
-        /entry.*level.*position/i
+        /entry.*level.*position/i,
+        /coding.*challenge/i,
+        /technical.*assessment/i,
+        /offer.*letter/i,
+        /congratulations.*position/i,
+        /unfortunately.*application/i
       ],
       
       senders: [
-        /@.*\.com$/,
         /noreply/i,
+        /no-reply/i,
         /careers/i,
         /recruiting/i,
         /talent/i,
-        /hr/i,
-        /jobs/i,
+        /hr@/i,
+        /jobs@/i,
         /workday/i,
         /greenhouse/i,
         /lever/i,
         /bamboohr/i,
         /jobvite/i,
         /smartrecruiters/i,
-        /successfactors/i
-      ],
-      
-      companies: [
-        'google', 'microsoft', 'amazon', 'apple', 'facebook', 'meta',
-        'netflix', 'uber', 'airbnb', 'spotify', 'tesla', 'twitter',
-        'linkedin', 'salesforce', 'adobe', 'nvidia', 'intel', 'ibm',
-        'oracle', 'vmware', 'palantir', 'stripe', 'square', 'dropbox',
-        'slack', 'zoom', 'docusign', 'snowflake', 'databricks',
-        'coinbase', 'robinhood', 'pinterest', 'snap', 'tiktok',
-        'goldman sachs', 'morgan stanley', 'jp morgan', 'blackrock',
-        'two sigma', 'citadel', 'jane street', 'hudson river trading'
+        /successfactors/i,
+        /taleo/i,
+        /icims/i,
+        /myworkdaysite/i
       ],
       
       keywords: [
@@ -68,166 +70,316 @@ class GmailScanner {
         'interview', 'assessment', 'coding challenge', 'technical screen',
         'onsite', 'virtual interview', 'phone screen', 'recruiter',
         'hiring manager', 'next steps', 'offer', 'compensation',
-        'start date', 'background check', 'references'
+        'start date', 'background check', 'references', 'congratulations',
+        'unfortunately', 'regret to inform', 'not selected'
       ]
     };
   }
 
-  // Setup OAuth2 authentication
-  async setupAuth() {
+  // Initialize Gmail authentication - matches EmailIntegration expectations
+  async initialize() {
     try {
-      // OAuth2 credentials (user will need to set these up)
-      const credentials = emailStore.get('gmail_credentials');
+      console.log('🚀 Initializing Gmail scanner...');
       
+      const credentials = this.getStoredCredentials();
       if (!credentials) {
-        throw new Error('Gmail credentials not configured. Please run setup first.');
+        console.log('⚠️ No Gmail credentials found');
+        return { success: false, needsSetup: true };
       }
 
       this.oauth2Client = new google.auth.OAuth2(
         credentials.client_id,
         credentials.client_secret,
-        credentials.redirect_uri
+        this.REDIRECT_URI
       );
 
-      // Check if we have a stored token
+      // Check if we have valid tokens
       const token = emailStore.get('gmail_token');
       if (token) {
         this.oauth2Client.setCredentials(token);
-        this.gmail = google.gmail({ version: 'v1', auth: this.oauth2Client });
-        this.isAuthenticated = true;
-        console.log('✅ Gmail authentication successful');
-        return true;
+        
+        // Test if token is still valid
+        try {
+          this.gmail = google.gmail({ version: 'v1', auth: this.oauth2Client });
+          await this.gmail.users.getProfile({ userId: 'me' });
+          
+          this.isAuthenticated = true;
+          console.log('✅ Gmail authentication successful');
+          return { success: true, needsSetup: false };
+        } catch (error) {
+          console.log('⚠️ Stored token invalid, re-authentication needed');
+          emailStore.delete('gmail_token');
+        }
       }
 
-      return false;
+      return { success: false, needsSetup: false, needsAuth: true };
     } catch (error) {
-      console.error('❌ Gmail auth setup failed:', error);
-      return false;
+      console.error('❌ Gmail initialization failed:', error);
+      return { success: false, error: error.message };
     }
   }
 
-  // Get OAuth2 authorization URL
-  getAuthUrl() {
-    if (!this.oauth2Client) {
-      throw new Error('OAuth2 client not initialized');
+  // Setup Gmail credentials - matches EmailIntegration expectations
+  setupCredentials(clientId, clientSecret) {
+    try {
+      if (!clientId || !clientSecret) {
+        throw new Error('Client ID and Client Secret are required');
+      }
+
+      // Validate credentials format
+      if (!clientId.includes('.googleusercontent.com')) {
+        throw new Error('Invalid Client ID format');
+      }
+
+      const credentials = {
+        client_id: clientId.trim(),
+        client_secret: clientSecret.trim(),
+        redirect_uri: this.REDIRECT_URI
+      };
+
+      emailStore.set('gmail_credentials', credentials);
+      console.log('✅ Gmail credentials saved');
+      
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Credential setup failed:', error);
+      return { success: false, error: error.message };
     }
-
-    const scopes = [
-      'https://www.googleapis.com/auth/gmail.readonly',
-      'https://www.googleapis.com/auth/gmail.modify'
-    ];
-
-    return this.oauth2Client.generateAuthUrl({
-      access_type: 'offline',
-      scope: scopes,
-      prompt: 'consent'
-    });
   }
 
-  // Complete OAuth2 flow with authorization code
+  // Start authentication flow
+  async startAuthFlow() {
+    try {
+      if (this.authInProgress) {
+        throw new Error('Authentication already in progress');
+      }
+
+      const credentials = this.getStoredCredentials();
+      if (!credentials) {
+        throw new Error('No credentials configured. Please setup credentials first.');
+      }
+
+      this.authInProgress = true;
+
+      this.oauth2Client = new google.auth.OAuth2(
+        credentials.client_id,
+        credentials.client_secret,
+        this.REDIRECT_URI
+      );
+
+      const scopes = [
+        'https://www.googleapis.com/auth/gmail.readonly'
+      ];
+
+      const authUrl = this.oauth2Client.generateAuthUrl({
+        access_type: 'offline',
+        scope: scopes,
+        prompt: 'consent'
+      });
+
+      console.log('🔗 Opening authorization URL...');
+      
+      // Open browser with auth URL
+      await shell.openExternal(authUrl);
+      
+      return { 
+        success: true, 
+        authUrl,
+        message: 'Browser opened for authorization. Copy the authorization code when prompted.'
+      };
+    } catch (error) {
+      this.authInProgress = false;
+      console.error('❌ Auth flow start failed:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Complete authentication with authorization code
   async completeAuth(authCode) {
     try {
-      const { tokens } = await this.oauth2Client.getToken(authCode);
+      if (!this.authInProgress) {
+        throw new Error('No authentication flow in progress');
+      }
+
+      if (!authCode || authCode.trim().length === 0) {
+        throw new Error('Authorization code is required');
+      }
+
+      console.log('🔑 Exchanging authorization code for tokens...');
+
+      const { tokens } = await this.oauth2Client.getToken(authCode.trim());
       this.oauth2Client.setCredentials(tokens);
       
       // Store tokens securely
       emailStore.set('gmail_token', tokens);
       
+      // Initialize Gmail API
       this.gmail = google.gmail({ version: 'v1', auth: this.oauth2Client });
       this.isAuthenticated = true;
+      this.authInProgress = false;
       
-      console.log('✅ Gmail authentication completed');
-      return true;
+      // Test the connection
+      const profile = await this.gmail.users.getProfile({ userId: 'me' });
+      
+      console.log('✅ Gmail authentication completed successfully');
+      console.log(`📧 Connected to: ${profile.data.emailAddress}`);
+      
+      return { 
+        success: true, 
+        email: profile.data.emailAddress,
+        totalMessages: profile.data.messagesTotal
+      };
     } catch (error) {
-      console.error('❌ Gmail auth completion failed:', error);
-      return false;
+      this.authInProgress = false;
+      console.error('❌ Auth completion failed:', error);
+      
+      // Provide more specific error messages
+      let errorMessage = error.message;
+      if (error.message.includes('invalid_grant')) {
+        errorMessage = 'Invalid or expired authorization code. Please try again.';
+      } else if (error.message.includes('invalid_client')) {
+        errorMessage = 'Invalid client credentials. Please check your setup.';
+      }
+      
+      return { success: false, error: errorMessage };
     }
   }
 
-  // Scan emails for internship applications
-  async scanForInternships(options = {}) {
+  // Scan emails with improved error handling and progress reporting
+  async scanForInternships(options = {}, progressCallback = null) {
     if (!this.isAuthenticated) {
-      throw new Error('Not authenticated with Gmail');
+      throw new Error('Not authenticated with Gmail. Please authenticate first.');
     }
 
     const {
-      maxResults = 100,
-      daysBack = 90,
+      maxResults = 50,
+      daysBack = 30,
       includeRead = true
     } = options;
 
     try {
-      console.log('🔍 Scanning emails for internship applications...');
+      console.log('🔍 Starting email scan for internships...');
       
+      if (progressCallback) {
+        progressCallback('Initializing email scan...', 0);
+      }
+
       // Calculate date range
       const dateFrom = new Date();
       dateFrom.setDate(dateFrom.getDate() - daysBack);
       const dateQuery = Math.floor(dateFrom.getTime() / 1000);
 
-      // Build Gmail search query
-      const queries = [
+      // Build comprehensive search query
+      const searchTerms = [
         'internship',
-        'application submitted',
-        'thank you for applying',
-        'application received',
-        'interview invitation',
-        'coding challenge',
-        'assessment',
-        'next steps',
-        'application status',
-        'position',
-        'opportunity'
+        'application',
+        '"thank you for applying"',
+        '"application received"',
+        '"interview invitation"',
+        '"coding challenge"',
+        '"next steps"',
+        '"position"',
+        '"opportunity"',
+        '"congratulations"',
+        '"unfortunately"'
       ];
 
-      const searchQuery = `(${queries.map(q => `"${q}"`).join(' OR ')}) after:${dateQuery}`;
+      const searchQuery = `(${searchTerms.join(' OR ')}) after:${dateQuery}`;
       
-      console.log('📧 Search query:', searchQuery);
+      console.log(`📧 Search query: ${searchQuery}`);
+      console.log(`📅 Date range: Last ${daysBack} days`);
+
+      if (progressCallback) {
+        progressCallback('Searching Gmail...', 10);
+      }
 
       // Search for emails
       const response = await this.gmail.users.messages.list({
         userId: 'me',
         q: searchQuery,
-        maxResults: maxResults
+        maxResults: Math.min(maxResults, 500) // API limit
       });
 
       const messages = response.data.messages || [];
       console.log(`📨 Found ${messages.length} potential emails`);
 
       if (messages.length === 0) {
+        if (progressCallback) {
+          progressCallback('No emails found', 100);
+        }
         return [];
       }
 
-      // Analyze each message
+      if (progressCallback) {
+        progressCallback(`Analyzing ${messages.length} emails...`, 20);
+      }
+
+      // Analyze messages in batches with progress reporting
       const internshipEmails = [];
-      const batchSize = 10;
+      const batchSize = 5; // Smaller batches for better UX
       
       for (let i = 0; i < messages.length; i += batchSize) {
         const batch = messages.slice(i, i + batchSize);
-        const batchResults = await Promise.all(
+        
+        // Process batch
+        const batchResults = await Promise.allSettled(
           batch.map(message => this.analyzeMessage(message.id))
         );
         
-        internshipEmails.push(...batchResults.filter(Boolean));
+        // Extract successful results
+        const validResults = batchResults
+          .filter(result => result.status === 'fulfilled' && result.value)
+          .map(result => result.value);
         
-        // Progress logging
-        console.log(`📊 Processed ${Math.min(i + batchSize, messages.length)}/${messages.length} emails`);
+        internshipEmails.push(...validResults);
         
-        // Rate limiting
+        // Update progress
+        const progress = 20 + Math.floor((i + batchSize) / messages.length * 70);
+        const processed = Math.min(i + batchSize, messages.length);
+        
+        if (progressCallback) {
+          progressCallback(`Processed ${processed}/${messages.length} emails`, progress);
+        }
+        
+        console.log(`📊 Batch ${Math.floor(i/batchSize) + 1}: ${validResults.length} internship emails found`);
+        
+        // Rate limiting to avoid API quotas
         if (i + batchSize < messages.length) {
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await new Promise(resolve => setTimeout(resolve, 200));
         }
       }
 
-      console.log(`✅ Found ${internshipEmails.length} internship-related emails`);
+      // Sort by relevance (confidence score)
+      internshipEmails.sort((a, b) => b.analysis.score - a.analysis.score);
+
+      if (progressCallback) {
+        progressCallback(`Scan complete! Found ${internshipEmails.length} internship emails`, 100);
+      }
+
+      console.log(`✅ Scan complete: ${internshipEmails.length} internship-related emails found`);
+      
       return internshipEmails;
 
     } catch (error) {
       console.error('❌ Email scanning failed:', error);
+      
+      // Handle specific API errors
+      if (error.code === 429) {
+        throw new Error('Gmail API rate limit exceeded. Please try again later.');
+      } else if (error.code === 403) {
+        throw new Error('Gmail API access denied. Please check your permissions.');
+      } else if (error.code === 401) {
+        // Token expired, clear it
+        emailStore.delete('gmail_token');
+        this.isAuthenticated = false;
+        throw new Error('Authentication expired. Please re-authenticate.');
+      }
+      
       throw error;
     }
   }
 
-  // Analyze individual message for internship content
+  // Improved message analysis with better error handling
   async analyzeMessage(messageId) {
     try {
       const response = await this.gmail.users.messages.get({
@@ -237,6 +389,10 @@ class GmailScanner {
       });
 
       const message = response.data;
+      if (!message.payload || !message.payload.headers) {
+        return null;
+      }
+
       const headers = message.payload.headers;
       
       // Extract email metadata
@@ -244,19 +400,22 @@ class GmailScanner {
       const from = this.getHeader(headers, 'From') || '';
       const to = this.getHeader(headers, 'To') || '';
       const date = this.getHeader(headers, 'Date') || '';
-      const messageId = this.getHeader(headers, 'Message-ID') || '';
+
+      // Skip if missing essential data
+      if (!subject && !from) {
+        return null;
+      }
 
       // Get email body
       const body = this.extractEmailBody(message.payload);
       
-      // Analyze if this is an internship-related email
+      // Analyze content
       const analysis = this.analyzeEmailContent(subject, from, body);
       
-      if (!analysis.isInternshipRelated) {
+      // Only return if it's internship-related with decent confidence
+      if (!analysis.isInternshipRelated || analysis.score < 25) {
         return null;
       }
-
-      console.log(`📧 Found internship email: ${subject.substring(0, 50)}...`);
 
       return {
         id: message.id,
@@ -265,61 +424,19 @@ class GmailScanner {
         from,
         to,
         date: new Date(date),
-        body,
+        body: body.substring(0, 1000), // Limit body size
         analysis,
-        rawMessage: message,
-        processed: false
+        processed: false,
+        timestamp: Date.now()
       };
 
     } catch (error) {
-      console.error(`❌ Error analyzing message ${messageId}:`, error);
+      console.error(`❌ Error analyzing message ${messageId}:`, error.message);
       return null;
     }
   }
 
-  // Extract specific header value
-  getHeader(headers, name) {
-    const header = headers.find(h => h.name.toLowerCase() === name.toLowerCase());
-    return header ? header.value : '';
-  }
-
-  // Extract email body from message payload
-  extractEmailBody(payload) {
-    let body = '';
-
-    if (payload.body && payload.body.data) {
-      body = Buffer.from(payload.body.data, 'base64').toString();
-    } else if (payload.parts) {
-      for (const part of payload.parts) {
-        if (part.mimeType === 'text/plain' && part.body.data) {
-          body += Buffer.from(part.body.data, 'base64').toString();
-        } else if (part.mimeType === 'text/html' && part.body.data && !body) {
-          // Fallback to HTML if no plain text
-          const htmlBody = Buffer.from(part.body.data, 'base64').toString();
-          body = this.stripHtml(htmlBody);
-        }
-      }
-    }
-
-    return body;
-  }
-
-  // Strip HTML tags from email body
-  stripHtml(html) {
-    return html
-      .replace(/<script[^>]*>.*?<\/script>/gis, '')
-      .replace(/<style[^>]*>.*?<\/style>/gis, '')
-      .replace(/<[^>]*>/g, '')
-      .replace(/&nbsp;/g, ' ')
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&quot;/g, '"')
-      .replace(/\s+/g, ' ')
-      .trim();
-  }
-
-  // Analyze email content for internship relevance
+  // Enhanced content analysis with better scoring
   analyzeEmailContent(subject, from, body) {
     const content = `${subject} ${from} ${body}`.toLowerCase();
     
@@ -329,46 +446,49 @@ class GmailScanner {
       senderMatch: false,
       companyMatch: '',
       keywordMatches: [],
-      confidence: 0
+      confidence: 0,
+      indicators: []
     };
 
-    // Check subject patterns
+    // Subject analysis (high weight)
     for (const pattern of this.internshipPatterns.subjects) {
       if (pattern.test(subject)) {
-        score += 30;
+        score += 35;
         details.subjectMatch = true;
+        details.indicators.push('Subject match');
         break;
       }
     }
 
-    // Check sender patterns
+    // Sender analysis
     for (const pattern of this.internshipPatterns.senders) {
       if (pattern.test(from)) {
-        score += 20;
-        details.senderMatch = true;
-        break;
-      }
-    }
-
-    // Check for company mentions
-    for (const company of this.internshipPatterns.companies) {
-      if (content.includes(company.toLowerCase())) {
         score += 25;
-        details.companyMatch = company;
+        details.senderMatch = true;
+        details.indicators.push('Sender match');
         break;
       }
     }
 
-    // Check for keywords
-    for (const keyword of this.internshipPatterns.keywords) {
-      if (content.includes(keyword.toLowerCase())) {
-        score += 5;
-        details.keywordMatches.push(keyword);
-      }
+    // Company extraction from sender
+    const companyMatch = this.extractCompanyFromSender(from);
+    if (companyMatch) {
+      score += 15;
+      details.companyMatch = companyMatch;
+      details.indicators.push(`Company: ${companyMatch}`);
     }
 
-    // Additional scoring for specific phrases
-    const strongIndicators = [
+    // Keyword analysis
+    const keywordScore = this.scoreKeywords(content);
+    score += keywordScore.score;
+    details.keywordMatches = keywordScore.matches;
+    
+    if (keywordScore.matches.length > 0) {
+      details.indicators.push(`${keywordScore.matches.length} keywords`);
+    }
+
+    // Strong phrase indicators
+    const strongPhrases = [
       'application submitted',
       'thank you for applying',
       'application received',
@@ -379,29 +499,27 @@ class GmailScanner {
       'background check',
       'offer letter',
       'internship position',
-      'summer internship',
-      'co-op position'
+      'congratulations',
+      'unfortunately',
+      'regret to inform',
+      'not selected'
     ];
 
-    for (const indicator of strongIndicators) {
-      if (content.includes(indicator)) {
-        score += 15;
+    for (const phrase of strongPhrases) {
+      if (content.includes(phrase)) {
+        score += 20;
+        details.indicators.push(`Strong phrase: ${phrase}`);
       }
+    }
+
+    // Email format indicators
+    if (from.includes('noreply') || from.includes('no-reply')) {
+      score += 10;
+      details.indicators.push('Automated sender');
     }
 
     details.confidence = Math.min(score, 100);
     
-    // Extract potential company name from sender
-    if (!details.companyMatch) {
-      const companyMatch = from.match(/@([a-zA-Z0-9.-]+)\./);
-      if (companyMatch) {
-        const domain = companyMatch[1].toLowerCase();
-        if (!domain.includes('gmail') && !domain.includes('yahoo') && !domain.includes('outlook')) {
-          details.companyMatch = this.formatCompanyName(domain);
-        }
-      }
-    }
-
     return {
       isInternshipRelated: score >= 30,
       score,
@@ -410,141 +528,182 @@ class GmailScanner {
     };
   }
 
-  // Extract job details from email content
+  // Improved keyword scoring
+  scoreKeywords(content) {
+    let score = 0;
+    const matches = [];
+
+    for (const keyword of this.internshipPatterns.keywords) {
+      if (content.includes(keyword.toLowerCase())) {
+        score += 3;
+        matches.push(keyword);
+      }
+    }
+
+    return { score: Math.min(score, 30), matches };
+  }
+
+  // Better company extraction
+  extractCompanyFromSender(fromField) {
+    try {
+      // Extract email address
+      const emailMatch = fromField.match(/<([^>]+)>/);
+      const email = emailMatch ? emailMatch[1] : fromField;
+      
+      // Extract domain
+      const domainMatch = email.match(/@([^.]+)\./);
+      if (!domainMatch) return '';
+      
+      const domain = domainMatch[1].toLowerCase();
+      
+      // Skip common email providers
+      const providers = ['gmail', 'yahoo', 'outlook', 'hotmail', 'aol', 'icloud'];
+      if (providers.includes(domain)) return '';
+      
+      // Format company name
+      return domain.charAt(0).toUpperCase() + domain.slice(1);
+    } catch (error) {
+      return '';
+    }
+  }
+
+  // Enhanced job details extraction
   extractJobDetails(subject, body, companyHint) {
     const content = `${subject} ${body}`;
     
     const details = {
       company: companyHint || 'Unknown Company',
-      position: '',
-      location: '',
-      status: 'applied',
+      position: this.extractPosition(content),
+      location: this.extractLocation(content),
+      status: this.determineStatus(content),
       applicationDate: new Date().toISOString(),
       source: 'email',
-      notes: ''
+      notes: this.generateNotes(content)
     };
-
-    // Extract position from subject or body
-    const positionPatterns = [
-      /(?:for|position|role)\s+(.+?)(?:\s+at|\s+internship|$)/i,
-      /(.+?)\s+internship/i,
-      /internship\s+[-–]\s+(.+)/i,
-      /(.+?)\s+position/i,
-      /software\s+(engineer|developer|intern)/i,
-      /(frontend|backend|full.?stack|data|product|ux|ui)\s+(engineer|developer|designer|analyst|intern)/i
-    ];
-
-    for (const pattern of positionPatterns) {
-      const match = content.match(pattern);
-      if (match && match[1]) {
-        details.position = match[1].trim();
-        break;
-      }
-    }
-
-    // Extract location
-    const locationPatterns = [
-      /(?:location|based|office):\s*([^,\n]+)/i,
-      /([A-Z][a-z]+,\s*[A-Z]{2})\b/g, // City, State
-      /\b(Remote|Hybrid|On-site)\b/i,
-      /\b(San Francisco|New York|Seattle|Austin|Boston|Chicago|Los Angeles|Denver|Portland|Miami)\b/i
-    ];
-
-    for (const pattern of locationPatterns) {
-      const match = content.match(pattern);
-      if (match && match[1]) {
-        details.location = match[1].trim();
-        break;
-      }
-    }
-
-    // Determine status from email content
-    if (/interview|next\s+steps|assessment|coding\s+challenge/i.test(content)) {
-      details.status = 'interview';
-    } else if (/offer|congratulations|pleased\s+to\s+offer/i.test(content)) {
-      details.status = 'offer';
-    } else if (/unfortunately|regret|not\s+selected|rejected/i.test(content)) {
-      details.status = 'rejected';
-    }
-
-    // Extract application date if mentioned
-    const datePatterns = [
-      /applied\s+on\s+([^,\n]+)/i,
-      /submitted\s+on\s+([^,\n]+)/i,
-      /application\s+date:\s*([^,\n]+)/i
-    ];
-
-    for (const pattern of datePatterns) {
-      const match = content.match(pattern);
-      if (match && match[1]) {
-        try {
-          const parsedDate = new Date(match[1].trim());
-          if (!isNaN(parsedDate.getTime())) {
-            details.applicationDate = parsedDate.toISOString();
-          }
-        } catch (e) {
-          // Invalid date, keep default
-        }
-        break;
-      }
-    }
-
-    // Add relevant notes
-    const notes = [];
-    if (/coding\s+challenge/i.test(content)) notes.push('Coding challenge mentioned');
-    if (/interview/i.test(content)) notes.push('Interview scheduled');
-    if (/references/i.test(content)) notes.push('References requested');
-    if (/background\s+check/i.test(content)) notes.push('Background check required');
-    
-    details.notes = notes.join('; ');
 
     return details;
   }
 
-  // Format company name from domain
-  formatCompanyName(domain) {
-    // Remove common subdomains
-    domain = domain.replace(/^(www|mail|email|careers|jobs|talent)\./, '');
-    
-    // Split by dots and take the main part
-    const parts = domain.split('.');
-    const mainPart = parts[0];
-    
-    // Capitalize first letter
-    return mainPart.charAt(0).toUpperCase() + mainPart.slice(1);
-  }
+  // Extract position with better patterns
+  extractPosition(content) {
+    const patterns = [
+      /(?:for|position|role)\s+(.+?)(?:\s+at|\s+internship|$)/i,
+      /(.+?)\s+internship/i,
+      /internship\s+[-–]\s+(.+)/i,
+      /(.+?)\s+position/i,
+      /(software|frontend|backend|full.?stack|data|product|ux|ui)\s+(engineer|developer|designer|analyst|intern)/i,
+      /summer\s+(.+?)\s+intern/i
+    ];
 
-  // Get authentication status
-  isGmailAuthenticated() {
-    return this.isAuthenticated;
-  }
-
-  // Revoke authentication
-  async revokeAuth() {
-    try {
-      if (this.oauth2Client) {
-        await this.oauth2Client.revokeCredentials();
+    for (const pattern of patterns) {
+      const match = content.match(pattern);
+      if (match && match[1] && match[1].trim().length > 2) {
+        return match[1].trim();
       }
-      
-      // Clear stored tokens
-      emailStore.delete('gmail_token');
-      
-      this.gmail = null;
-      this.oauth2Client = null;
-      this.isAuthenticated = false;
-      
-      console.log('✅ Gmail authentication revoked');
-      return true;
-    } catch (error) {
-      console.error('❌ Error revoking auth:', error);
-      return false;
     }
+
+    return 'Position';
   }
 
-  // Test connection
+  // Extract location with common patterns
+  extractLocation(content) {
+    const patterns = [
+      /(?:location|based|office):\s*([^,\n]+)/i,
+      /([A-Z][a-z]+,\s*[A-Z]{2})\b/, // City, State
+      /\b(Remote|Hybrid|On-site)\b/i,
+      /\b(San Francisco|New York|Seattle|Austin|Boston|Chicago|Los Angeles|Denver|Portland|Miami|Atlanta|Dallas|Philadelphia|Phoenix|San Diego)\b/i
+    ];
+
+    for (const pattern of patterns) {
+      const match = content.match(pattern);
+      if (match && match[1]) {
+        return match[1].trim();
+      }
+    }
+
+    return 'Not specified';
+  }
+
+  // Determine application status from content
+  determineStatus(content) {
+    const lowerContent = content.toLowerCase();
+    
+    if (/offer|congratulations|pleased\s+to\s+offer|welcome\s+to\s+the\s+team/i.test(lowerContent)) {
+      return 'offer';
+    } else if (/unfortunately|regret|not\s+selected|rejected|will\s+not\s+be\s+moving\s+forward/i.test(lowerContent)) {
+      return 'rejected';
+    } else if (/interview|next\s+steps|assessment|coding\s+challenge|technical\s+screen|phone\s+screen/i.test(lowerContent)) {
+      return 'interview';
+    } else if (/application.*received|thank.*you.*applying|submitted.*successfully/i.test(lowerContent)) {
+      return 'applied';
+    }
+    
+    return 'applied';
+  }
+
+  // Generate helpful notes
+  generateNotes(content) {
+    const notes = [];
+    const lowerContent = content.toLowerCase();
+    
+    if (/coding\s+challenge/i.test(lowerContent)) notes.push('Coding challenge');
+    if (/technical\s+assessment/i.test(lowerContent)) notes.push('Technical assessment');
+    if (/interview/i.test(lowerContent)) notes.push('Interview mentioned');
+    if (/references/i.test(lowerContent)) notes.push('References requested');
+    if (/background\s+check/i.test(lowerContent)) notes.push('Background check');
+    if (/deadline/i.test(lowerContent)) notes.push('Has deadline');
+    
+    return notes.join('; ');
+  }
+
+  // Helper methods
+  getHeader(headers, name) {
+    const header = headers.find(h => h.name.toLowerCase() === name.toLowerCase());
+    return header ? header.value : '';
+  }
+
+  extractEmailBody(payload) {
+    let body = '';
+
+    try {
+      if (payload.body && payload.body.data) {
+        body = Buffer.from(payload.body.data, 'base64').toString('utf8');
+      } else if (payload.parts) {
+        for (const part of payload.parts) {
+          if (part.mimeType === 'text/plain' && part.body && part.body.data) {
+            body += Buffer.from(part.body.data, 'base64').toString('utf8');
+          } else if (part.mimeType === 'text/html' && part.body && part.body.data && !body) {
+            const htmlBody = Buffer.from(part.body.data, 'base64').toString('utf8');
+            body = this.stripHtml(htmlBody);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error extracting email body:', error);
+      body = '[Body extraction failed]';
+    }
+
+    return body.substring(0, 5000); // Limit body size
+  }
+
+  stripHtml(html) {
+    return html
+      .replace(/<script[^>]*>.*?<\/script>/gis, '')
+      .replace(/<style[^>]*>.*?<\/style>/gis, '')
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  // Authentication and connection methods
   async testConnection() {
-    if (!this.isAuthenticated) {
-      return false;
+    if (!this.isAuthenticated || !this.gmail) {
+      return { success: false, error: 'Not authenticated' };
     }
 
     try {
@@ -552,31 +711,73 @@ class GmailScanner {
         userId: 'me'
       });
       
-      console.log('✅ Gmail connection test successful');
-      console.log(`📧 Email: ${response.data.emailAddress}`);
-      console.log(`📊 Total messages: ${response.data.messagesTotal}`);
-      
-      return true;
+      return {
+        success: true,
+        email: response.data.emailAddress,
+        totalMessages: response.data.messagesTotal,
+        threadsTotal: response.data.threadsTotal
+      };
     } catch (error) {
-      console.error('❌ Gmail connection test failed:', error);
-      return false;
+      console.error('❌ Connection test failed:', error);
+      
+      // Handle token expiration
+      if (error.code === 401) {
+        emailStore.delete('gmail_token');
+        this.isAuthenticated = false;
+        return { success: false, error: 'Authentication expired', needsReauth: true };
+      }
+      
+      return { success: false, error: error.message };
     }
   }
 
-  // Save Gmail credentials
-  saveCredentials(credentials) {
-    emailStore.set('gmail_credentials', {
-      client_id: credentials.client_id,
-      client_secret: credentials.client_secret,
-      redirect_uri: credentials.redirect_uri || 'urn:ietf:wg:oauth:2.0:oob'
-    });
+  async revokeAuth() {
+    try {
+      if (this.oauth2Client) {
+        await this.oauth2Client.revokeCredentials();
+      }
+    } catch (error) {
+      console.warn('Error revoking OAuth credentials:', error);
+    }
     
-    console.log('✅ Gmail credentials saved');
+    // Clear all stored data
+    emailStore.delete('gmail_token');
+    emailStore.delete('gmail_credentials');
+    
+    this.gmail = null;
+    this.oauth2Client = null;
+    this.isAuthenticated = false;
+    this.authInProgress = false;
+    
+    console.log('✅ Gmail authentication revoked and data cleared');
+    return { success: true };
   }
 
-  // Get stored credentials
+  // Status and credential methods
+  isGmailAuthenticated() {
+    return this.isAuthenticated;
+  }
+
   getStoredCredentials() {
     return emailStore.get('gmail_credentials');
+  }
+
+  getConnectionStatus() {
+    return {
+      isAuthenticated: this.isAuthenticated,
+      hasCredentials: !!this.getStoredCredentials(),
+      authInProgress: this.authInProgress
+    };
+  }
+
+  // Clear all data
+  clearAllData() {
+    emailStore.clear();
+    this.gmail = null;
+    this.oauth2Client = null;
+    this.isAuthenticated = false;
+    this.authInProgress = false;
+    console.log('🗑️ All Gmail data cleared');
   }
 }
 

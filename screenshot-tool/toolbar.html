@@ -128,22 +128,25 @@
     .action-buttons {
       display: flex;
       gap: 6px;
-      /* Reduced gap */
+      /* Increased gap for circular buttons */
       flex: 1;
       min-width: 0;
+      justify-content: center;
+      /* Center the buttons */
     }
 
     .action-btn {
       display: flex;
       align-items: center;
-      gap: 6px;
-      /* Reduced gap */
-      padding: 8px 14px;
-      /* Reduced padding */
+      justify-content: center;
+      gap: 0;
+      /* No gap needed for icon-only */
+      padding: 8px;
+      /* Square padding for icon-only buttons */
       background: rgba(255, 255, 255, 0.12);
       border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 22px;
-      /* Reduced radius */
+      border-radius: 50%;
+      /* Circular buttons for icon-only */
       color: white;
       font-size: 12px;
       /* Reduced font size */
@@ -154,9 +157,12 @@
       text-decoration: none;
       white-space: nowrap;
       flex: 1;
-      justify-content: center;
       min-width: 0;
       outline: none;
+      width: 36px;
+      /* Fixed width for circular buttons */
+      height: 36px;
+      /* Fixed height for circular buttons */
     }
 
     .action-btn:hover {
@@ -197,9 +203,9 @@
     }
 
     .icon {
-      width: 14px;
-      /* Reduced icon size */
-      height: 14px;
+      width: 16px;
+      /* Slightly larger icon for circular buttons */
+      height: 16px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -701,29 +707,26 @@
     <div class="floating-toolbar" id="toolbar">
       <div class="smart-indicator" id="statusIndicator"></div>
       <div class="action-buttons">
-        <button class="action-btn primary" id="captureBtn" tabindex="1">
+        <button class="action-btn primary" id="captureBtn" tabindex="1" title="Capture Screenshot">
           <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
             <circle cx="12" cy="13" r="4"></circle>
           </svg>
-          Capture
         </button>
-        <button class="action-btn" id="analyzeBtn" tabindex="2">
+        <button class="action-btn" id="analyzeBtn" tabindex="2" title="Analyze Job Posting">
           <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
           </svg>
-          Analyze
         </button>
-        <button class="action-btn" id="gmailScanBtn" tabindex="4">
+        <button class="action-btn" id="gmailScanBtn" tabindex="4" title="Scan Gmail">
           <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect>
             <polyline points="22,6 12,13 2,6"></polyline>
           </svg>
-          Gmail Scan
         </button>
-        <button class="action-btn dashboard-toggle" id="dashboardToggle" tabindex="3">
+        <button class="action-btn dashboard-toggle" id="dashboardToggle" tabindex="3" title="Dashboard">
           <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
